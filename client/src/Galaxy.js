@@ -3,8 +3,8 @@ import React, {useEffect, useState, useRef} from 'react';
 const stars = []
 for(let x=0; x<1000; x++) {
     stars.push({
-        x: Math.random() * 5000,
-        y: Math.random() * 5000,
+        x: Math.random() * 10000,
+        y: Math.random() * 10000,
         color: ['#FFFFE0', '#FFFACD', '#FAFAD2', '#FFFF99', '#FFFFCC'][Math.round(Math.random() * 5)]
     })
 }
@@ -144,42 +144,45 @@ function Galaxy(props) {
         var pt = ctx.transformedPoint(lastX,lastY);
         ctx.restore()
 
-        // TODO take short
         Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
-            Object.entries(sun.planets).forEach(([planetId, planet]) => {
-
-                let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
-                let planetX = sun.x + (planet.distance * Math.sin(planetAngle));
-                let planetY = sun.y + (planet.distance * Math.cos(planetAngle));
-
-                const planetDistance = getDistance(planetX, planetY, pt.x, pt.y)
-                
-                if(planetDistance<planet.size) {
-                    const angle = Math.atan2(pt.y - planetY, pt.x - planetX)
-                    // TODO move this randomization to the server
-                    const randomizedAngle = angle + (Math.random() * (Math.PI / 20)) - (Math.PI / 40)
-
-                    props.launchFighter("planet", {sun, planet}, randomizedAngle)
-                } else if(planetDistance<500) {
-
-                    Object.entries(planet.moons).forEach(([moonId, moon]) => {
-
-                        let moonAngle = moon.angle.value + (timeRef.current * Math.PI/moon.distance * moon.angle.speed);
-                        let moonX = planetX + (moon.distance * Math.sin(moonAngle));
-                        let moonY = planetY + (moon.distance * Math.cos(moonAngle));
-        
-                        const moonDistance = getDistance(moonX, moonY, pt.x, pt.y)
-        
-                        if(moonDistance<moon.size) {
-                            const angle = Math.atan2(pt.y - moonY, pt.x - moonX)
-                            // TODO move this randomization to the server
-                            const randomizedAngle = angle + (Math.random() * (Math.PI / 20)) - (Math.PI / 40)
-
-                            props.launchFighter("moon", {sun, planet, moon}, randomizedAngle)
-                        }
-                    })
+            const sunDistance = getDistance(sun.x, sun.y, pt.x, pt.y)
+            if(sunDistance<sun.size) {
+                if(sun.owner === userRef.current.id) {
+                    const angle = Math.atan2(pt.y - sun.y, pt.x - sun.x)
+                    props.solarNavigation(sun.id, angle)
                 }
-            })
+            } else {
+                Object.entries(sun.planets).forEach(([planetId, planet]) => {
+
+                    let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
+                    let planetX = sun.x + (planet.distance * Math.sin(planetAngle));
+                    let planetY = sun.y + (planet.distance * Math.cos(planetAngle));
+
+                    const planetDistance = getDistance(planetX, planetY, pt.x, pt.y)
+                    
+                    if(planetDistance<planet.size) {
+                        if(planet.owner === userRef.current.id) {
+                            const angle = Math.atan2(pt.y - planetY, pt.x - planetX)
+                            props.launchFighter("planet", {sunId: sun.id, planetId: planet.id}, angle)
+                        }
+                    } else if(planetDistance<500) {
+
+                        Object.entries(planet.moons).forEach(([moonId, moon]) => {
+
+                            let moonAngle = moon.angle.value + (timeRef.current * Math.PI/moon.distance * moon.angle.speed);
+                            let moonX = planetX + (moon.distance * Math.sin(moonAngle));
+                            let moonY = planetY + (moon.distance * Math.cos(moonAngle));
+            
+                            const moonDistance = getDistance(moonX, moonY, pt.x, pt.y)
+            
+                            if(moonDistance<moon.size && moon.owner === userRef.current.id) {
+                                const angle = Math.atan2(pt.y - moonY, pt.x - moonX)
+                                props.launchFighter("moon", {sunId: sun.id, planetId: planet.id, moonId: moon.id}, angle)
+                            }
+                        })
+                    }
+                })
+            }
         })
 
     },false);
@@ -225,10 +228,12 @@ function Galaxy(props) {
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // User view window
         ctx.save()
         ctx.translate(translateX,translateY)   
-        ctx.scale(zoomscale,zoomscale)        
+        ctx.scale(zoomscale,zoomscale)
 
+        // Background stars
         stars.forEach(star => {
             ctx.beginPath();
             ctx.arc(star.x, star.y, 1, 0, 2 * Math.PI);
@@ -236,62 +241,161 @@ function Galaxy(props) {
             ctx.fill();
         })
 
-        Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
-            let shipX = ship.x + (8 * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
-            let shipY = ship.y + (8 * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
-
-            ctx.save();
-            ctx.translate(shipX, shipY);
-            ctx.rotate(ship.angle.value);
-            ctx.beginPath();
-            ctx.moveTo(-4, -2);
-            ctx.lineTo(4, 0);
-            ctx.lineTo(-4, 2);
-            console.log(ship.owner, userRef.current.id )
-            ctx.fillStyle = ship.owner === userRef.current.id ? "green" : "red";
-            ctx.fill();
-            ctx.restore()  
-        })
-
+        // Draw suns
         Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+
+            // Sun name
+            if(zoomscale<1) {
+                ctx.font = '35pt Calibri';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'yellow';
+                ctx.fillText(sun.name, sun.x, sun.y-250);
+            }
+
+            // Sun
             ctx.beginPath();
             ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
             ctx.fillStyle = "yellow";
             ctx.fill();
 
+            // Draw orbits
+            if(zoomscale>.3) {
+                Object.entries(sun.planets).forEach(([planetId, planet]) => {
+                    let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
+                    let planetX = sun.x + (planet.distance * Math.sin(planetAngle))
+                    let planetY = sun.y + (planet.distance * Math.cos(planetAngle))
+
+                    // Planet orbit
+                    ctx.beginPath();
+                    ctx.arc(sun.x, sun.y, planet.distance, 0, 2 * Math.PI);
+                    ctx.strokeStyle = "#3F3F3F55";
+                    ctx.stroke();
+
+                    // Moon orbits
+                    if(zoomscale>.15) {
+                        Object.entries(planet.moons).forEach(([moonId, moon]) => {
+                            ctx.beginPath();
+                            ctx.arc(planetX, planetY, moon.distance, 0, 2 * Math.PI);
+                            ctx.strokeStyle = "#3F3F3F55";
+                            ctx.stroke();
+                        })
+                    }  
+                })
+            }
+        })
+
+        // Ships
+        if(zoomscale>.1) {
+            Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
+                let shipX = ship.x + (8 * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
+                let shipY = ship.y + (8 * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+
+                ctx.save();
+                ctx.translate(shipX, shipY);
+                ctx.rotate(ship.angle.value);
+                ctx.beginPath();
+                ctx.moveTo(-4, -2);
+                ctx.lineTo(4, 0);
+                ctx.lineTo(-4, 2);
+
+                ctx.fillStyle = ship.owner === userRef.current.id ? "green" : "red";
+                ctx.fill();
+                ctx.restore()  
+            })
+        }
+
+        // Planets
+        Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+
             Object.entries(sun.planets).forEach(([planetId, planet]) => {
                 let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
-                let planetStrength = planet.owner ? planet.strength.value + Math.min(100, ((timeRef.current-planet.strength.time) * 1)) : 0
+                let planetStrength = planet.owner ? Math.min(planet.strength.max, planet.strength.value + ((timeRef.current-planet.strength.time) * planet.strength.speed)) : 0
                 let planetX = sun.x + (planet.distance * Math.sin(planetAngle))
                 let planetY = sun.y + (planet.distance * Math.cos(planetAngle))
 
-                ctx.beginPath();
-                ctx.arc(sun.x, sun.y, planet.distance, 0, 2 * Math.PI);
-                ctx.strokeStyle = "#3F3F3F";
-                ctx.stroke();
-
+                // Planet shadow
+                if(zoomscale>1) {
+                    var grd = ctx.createRadialGradient(planetX, planetY, 0, planetX, planetY, planet.size*2);
+                    grd.addColorStop(0, "rgb(0,0,0,1)");
+                    grd.addColorStop(1, "rgb(0,0,0,0)");
+                    ctx.fillStyle = grd;
+                    ctx.beginPath();
+                    ctx.arc(planetX, planetY, planet.size*2, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+    
+                // Planet
                 ctx.beginPath();
                 ctx.arc(planetX, planetY, planet.size, 0, 2 * Math.PI);
                 ctx.fillStyle = planet.owner ? (planet.owner===userRef.current.id ? rgb(0, 55+Math.min(200, planetStrength), 0) : rgb(55+Math.min(200, planetStrength), 0, 0)): "gray";
                 ctx.fill();
 
-                Object.entries(planet.moons).forEach(([moonId, moon]) => {
-                    let moonAngle = moon.angle.value + (timeRef.current * Math.PI/moon.distance * moon.angle.speed);
-                    let moonStrength = moon.owner ? moon.strength.value + Math.min(100, ((timeRef.current-moon.strength.time) * 1)) : 0
+                // Planet strength
+                if(zoomscale>.75 && planetStrength> 0) { 
+                    ctx.font = '5pt Calibri';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(Math.round(planetStrength), planetX, planetY+2);                
+                }
 
-                    ctx.beginPath();
-                    ctx.arc(planetX, planetY, moon.distance, 0, 2 * Math.PI);
-                    ctx.strokeStyle = "#3F3F3F";
-                    ctx.stroke();
-    
-                    ctx.beginPath();
-                    ctx.arc(planetX + (moon.distance * Math.sin(moonAngle)), planetY + (moon.distance * Math.cos(moonAngle)), moon.size, 0, 2 * Math.PI);
-                    ctx.fillStyle = moon.owner ? (moon.owner===userRef.current.id ? rgb(0, 55+Math.min(200, moonStrength), 0) : rgb(55+Math.min(200, moonStrength), 0, 0)): "gray";
-                    ctx.fill();
-                })
-    
+                // Draw moons
+                if(zoomscale>.15) {
+                    Object.entries(planet.moons).forEach(([moonId, moon]) => {
+                        const moonAngle = moon.angle.value + (timeRef.current * Math.PI/moon.distance * moon.angle.speed);
+                        const moonStrength = moon.owner ? Math.min(moon.strength.max, moon.strength.value + ((timeRef.current-moon.strength.time) * moon.strength.speed)) : 0
+                        const moonX = planetX + (moon.distance * Math.sin(moonAngle))
+                        const moonY = planetY + (moon.distance * Math.cos(moonAngle))
+
+                        // Moon shadow
+                        if(zoomscale>1) {
+                            var grd = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, moon.size*2);
+                            grd.addColorStop(0, "rgb(0,0,0,1)");
+                            grd.addColorStop(1, "rgb(0,0,0,0)");
+                            ctx.fillStyle = grd;
+                            ctx.beginPath();
+                            ctx.arc(moonX, moonY, moon.size*2, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+
+                        // Moon
+                        ctx.beginPath();
+                        ctx.arc(moonX, moonY, moon.size, 0, 2 * Math.PI);
+                        ctx.fillStyle = moon.owner ? (moon.owner===userRef.current.id ? rgb(0, 55+Math.min(200, moonStrength), 0) : rgb(55+Math.min(200, moonStrength), 0, 0)): "gray";
+                        ctx.fill();
+
+                        // Moon strength
+                        if(zoomscale>.75 && moonStrength> 0) { 
+                            ctx.font = '3pt Calibri';
+                            ctx.textAlign = 'center';
+                            ctx.fillStyle = 'white';
+                            ctx.fillText(Math.round(moonStrength), moonX, moonY+1);                
+                        }
+
+                    })
+                }    
             })
         })
+
+        // Draw sun hase
+        Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+            if(sun.owner) {
+                var grd = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, 750);
+                grd.addColorStop(0, sun.owner === userRef.current.id ? "rgb(0,255,0,.10)" : "rgb(255,0,0,.10)");
+                grd.addColorStop(1, "rgb(0,0,0,0)");
+                ctx.fillStyle = grd;
+                ctx.beginPath();
+                ctx.arc(sun.x, sun.y, 750, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            var grd = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, 100);
+            grd.addColorStop(0, "rgb(255,255,0, .25)");
+            grd.addColorStop(1, "rgb(0,0,0,0)");
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.arc(sun.x, sun.y, 100, 0, 2 * Math.PI);
+            ctx.fill();
+        })        
 
         ctx.restore()
 

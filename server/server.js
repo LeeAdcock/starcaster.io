@@ -20,11 +20,482 @@ const getUniqueID = () => {
   };
 
   const suns = {}
-  const createSun = () => {
+  const sunNames = [
+    "Absolutno",
+	"Acamar",
+	"Achernar",
+	"Achird",
+	"Acrab",
+	"Acrux",
+	"Acubens",
+	"Adhafera",
+	"Adhara",
+	"Adhil",
+	"Ain",
+	"Ainalrami",
+	"Aladfar",
+	"Alamak",
+	"Alasia",
+	"Alathfar",
+	"Albaldah",
+	"Albali",
+	"Albireo",
+	"Alchiba",
+	"Alcor",
+	"Alcyone",
+	"Aldebaran",
+	"Alderamin",
+	"Aldhanab",
+	"Aldhibah",
+	"Aldulfin",
+	"Alfirk",
+	"Algedi",
+	"Algenib",
+	"Algieba",
+	"Algol",
+	"Algorab",
+	"Alhena",
+	"Alioth",
+	"Aljanah",
+	"Alkaid",
+	"Al Kalb al Rai",
+	"Alkalurops",
+	"Alkaphrah",
+	"Alkarab",
+	"Alkes",
+	"Almaaz",
+	"Almach",
+	"Al Minliar al Asad",
+	"Alnair",
+	"Alnasl",
+	"Alnilam",
+	"Alnitak",
+	"Alniyat",
+	"Alphard",
+	"Alphecca",
+	"Alpheratz",
+	"Alpherg",
+	"Alrakis",
+	"Alrescha",
+	"Alruba",
+	"Alsafi",
+	"Alsciaukat",
+	"Alsephina",
+	"Alshain",
+	"Alshat",
+	"Altair",
+	"Altais",
+	"Alterf",
+	"Aludra",
+	"Alula Australis",
+	"Alula Borealis",
+	"Alya",
+	"Alzirr",
+	"Amadioha",
+	"Amansinaya",
+	"Anadolu",
+	"Ancha",
+	"Angetenar",
+	"Aniara",
+	"Ankaa",
+	"Anser",
+	"Antares",
+	"Arcalís",
+	"Arcturus",
+	"Arkab Posterior",
+	"Arkab Prior",
+	"Arneb",
+	"Ascella",
+	"Asellus Australis",
+	"Asellus Borealis",
+	"Ashlesha",
+	"Asellus Primus",
+	"Asellus Secundus",
+	"Asellus Tertius",
+	"Aspidiske",
+	"Asterope, Sterope",
+	"Atakoraka",
+	"Athebyne",
+	"Atik",
+	"Atlas",
+	"Atria",
+	"Avior",
+	"Axólotl",
+	"Ayeyarwady",
+	"Azelfafage",
+	"Azha",
+	"Azmidi",
+	"Baekdu",
+	"Barnard's Star",
+	"Baten Kaitos",
+	"Beemim",
+	"Beid",
+	"Belel",
+	"Bélénos",
+	"Bellatrix",
+	"Berehynia",
+	"Betelgeuse",
+	"Bharani",
+	"Bibhā",
+	"Biham",
+	"Bosona",
+	"Botein",
+	"Brachium",
+	"Bubup",
+	"Buna",
+	"Bunda",
+	"Canopus",
+	"Capella",
+	"Caph",
+	"Castor",
+	"Castula",
+	"Cebalrai",
+	"Ceibo",
+	"Celaeno",
+	"Cervantes",
+	"Chalawan",
+	"Chamukuy",
+	"Chaophraya",
+	"Chara",
+	"Chason",
+	"Chechia",
+	"Chertan",
+	"Citadelle",
+	"Citalá",
+	"Cocibolca",
+	"Copernicus",
+	"Cor Caroli",
+	"Cujam",
+	"Cursa",
+	"Dabih",
+	"Dalim",
+	"Deneb",
+	"Deneb Algedi",
+	"Denebola",
+	"Diadem",
+	"Dingolay",
+	"Diphda",
+	"Dìwö",
+	"Diya",
+	"Dofida",
+	"Dombay",
+	"Dschubba",
+	"Dubhe",
+	"Dziban",
+	"Ebla",
+	"Edasich",
+	"Electra",
+	"Elgafar",
+	"Elkurud",
+	"Elnath",
+	"Eltanin",
+	"Emiw",
+	"Enif",
+	"Errai",
+	"Fafnir",
+	"Fang",
+	"Fawaris",
+	"Felis",
+	"Felixvarela",
+	"Flegetonte",
+	"Fomalhaut",
+	"Formosa",
+	"Franz",
+	"Fulu",
+	"Funi",
+	"Fumalsamakah",
+	"Furud",
+	"Fuyue",
+	"Gacrux",
+	"Gakyid",
+	"Garnet Star",
+	"Giausar",
+	"Gienah",
+	"Ginan",
+	"Gloas",
+	"Gomeisa",
+	"Graffias",
+	"Grumium",
+	"Gudja",
+	"Gumala",
+	"Guniibuu",
+	"Hadar",
+	"Haedus",
+	"Hamal",
+	"Hassaleh",
+	"Hatysa",
+	"Helvetios",
+	"Heze",
+	"Hoggar",
+	"Homam",
+	"Horna",
+	"Hunahpú",
+	"Hunor",
+	"Iklil",
+	"Illyrian",
+	"Imai",
+	"Intercrus",
+	"Inquill",
+	"Intan",
+	"Irena",
+	"Itonda",
+	"Izar",
+	"Jabbah",
+	"Jishui",
+	"Kaffaljidhma",
+	"Kakkab",
+	"Kalausi",
+	"Kamuy",
+	"Kang",
+	"Karaka",
+	"Kaus Australis",
+	"Kaus Borealis",
+	"Kaus Media",
+	"Kaveh",
+	"Kekouan",
+	"Keid",
+	"Khambalia",
+	"Kitalpha",
+	"Kochab",
+	"Koeia",
+	"Koit",
+	"Kornephoros",
+	"Kraz",
+	"Kuma",
+	"Kurhah",
+	"La Superba",
+	"Larawag",
+	"Lerna",
+	"Lesath",
+	"Libertas",
+	"Lich",
+	"Liesma",
+	"Lilii Borea",
+	"Lionrock",
+	"Lucilinburhuc",
+	"Lusitânia",
+	"Maasym",
+	"Macondo",
+	"Mago",
+	"Mahasim",
+	"Mahsati",
+	"Maia",
+	"Malmok",
+	"Marfak",
+	"Marfik",
+	"Markab",
+	"Markeb",
+	"Márohu",
+	"Marsic",
+	"Matar",
+	"Mazaalai",
+	"Mebsuta",
+	"Megrez",
+	"Meissa",
+	"Mekbuda",
+	"Meleph",
+	"Menkalinan",
+	"Menkar",
+	"Menkent",
+	"Menkib",
+	"Merak",
+	"Merga",
+	"Meridiana",
+	"Merope",
+	"Mesarthim",
+	"Miaplacidus",
+	"Mimosa",
+	"Minchir",
+	"Minelauva",
+	"Mintaka",
+	"Mira",
+	"Mirach",
+	"Miram",
+	"Mirfak",
+	"Mirzam",
+	"Misam",
+	"Mizar",
+	"Moldoveanu",
+	"Mönch",
+	"Montuno",
+	"Morava",
+	"Moriah",
+	"Mothallah",
+	"Mouhoun",
+	"Mpingo",
+	"Muliphein",
+	"Muphrid",
+	"Muscida",
+	"Musica",
+	"Muspelheim",
+	"Nahn",
+	"Naledi",
+	"Naos",
+	"Nash",
+	"Nashira",
+	"Násti",
+	"Natasha",
+	"Navi",
+	"Nekkar",
+	"Nembus",
+	"Nenque",
+	"Nervia",
+	"Nihal",
+	"Nikawiy",
+	"Nosaxa",
+	"Nunki",
+	"Nusakan",
+	"Nushagak",
+	"Nyamien",
+	"Ogma",
+	"Okab",
+	"Paikauhale",
+	"Parumleo",
+	"Peacock",
+	"Petra",
+	"Phact",
+	"Phecda",
+	"Pherkad",
+	"Phoenicia",
+	"Piautos",
+	"Pincoya",
+	"Pipoltr",
+	"Pipirima",
+	"Pleione",
+	"Poerava",
+	"Polaris",
+	"Polaris Australis",
+	"Polis",
+	"Pollux",
+	"Porrima",
+	"Praecipua",
+	"Prima Hyadum",
+	"Procyon",
+	"Propus",
+	"Proxima Centauri",
+	"Ran",
+	"Rapeto",
+	"Rasalas",
+	"Rasalgethi",
+	"Rasalhague",
+	"Rastaban",
+	"Regor",
+	"Regulus",
+	"Revati",
+	"Rigel",
+	"Rigil Kentaurus",
+	"Rosalíadecastro",
+	"Rotanev",
+	"Ruchbah",
+	"Rukbat",
+	"Sabik",
+	"Saclateni",
+	"Sadachbia",
+	"Sadalbari",
+	"Sadalmelik",
+	"Sadalsuud",
+	"Sadr",
+	"Sagarmatha",
+	"Saiph",
+	"Salm",
+	"Sāmaya",
+	"Sansuna",
+	"Sargas",
+	"Sarin",
+	"Sarir",
+	"Sceptrum",
+	"Scheat",
+	"Schedar",
+	"Secunda Hyadum",
+	"Segin",
+	"Seginus",
+	"Sham",
+	"Shama",
+	"Sharjah",
+	"Shaula",
+	"Sheliak",
+	"Sheratan",
+	"Sika",
+	"Sirius",
+	"Situla",
+	"Skat",
+	"Solaris",
+	"Spica",
+	"Sterrennacht",
+	"Stribor",
+	"Sualocin",
+	"Subra",
+	"Suhail",
+	"Sulafat",
+	"Syrma",
+	"Tabit",
+	"Taika",
+	"Taiyangshou",
+	"Taiyi",
+	"Talitha",
+	"Tangra",
+	"Tania Australis",
+	"Tania Borealis",
+	"Tapecue",
+	"Tarazed",
+	"Tarf",
+	"Taygeta",
+	"Tegmine",
+	"Tejat",
+	"Terebellum",
+	"Tevel",
+	"Thabit",
+	"Theemin",
+	"Thuban",
+	"Tiaki",
+	"Tianguan",
+	"Tianyi",
+	"Timir",
+	"Tislit",
+	"Titawin",
+	"Tojil",
+	"Toliman",
+	"Tonatiuh",
+	"Torcular",
+	"Tuiren",
+	"Tupã",
+	"Tupi",
+	"Tureis",
+	"Ukdah",
+	"Uklun",
+	"Unukalhai",
+	"Unurgunite",
+	"Uruk",
+	"Vega",
+	"Veritate",
+	"Vindemiatrix",
+	"Wasat",
+	"Wazn",
+	"Wezen",
+	"Wurren",
+	"Xamidimura",
+	"Xihe",
+	"Xuange",
+	"Yed Posterior",
+	"Yed Prior",
+	"Yildun",
+	"Zaniah",
+	"Zaurak",
+	"Zavijava",
+	"Zhang",
+	"Zibal",
+	"Zosma",
+	"Zubenelgenubi",
+	"Zubenelhakrabi",
+	"Zubeneschamali"
+]
+const createSun = () => {
     const sun = {
         id: getUniqueID(),
-        x: Math.random() * 5000,
-        y: Math.random() * 5000,
+        name: sunNames[Math.floor(Math.random()*sunNames.length)],
+        owner: null,
+        x: Math.random() * 10000,
+        y: Math.random() * 10000,
         size: 20,
         planets: {}
     }
@@ -49,7 +520,11 @@ const createPlanet = (sunId) => {
         },
         size: 10,
         owner: null,
-        strength: { value: 0, time: 0, max: 100},
+        strength: { 
+            value: 0, 
+            time: 0, 
+            max: 100, 
+            speed: 2},
         moons: {}
     }
     for(let i=0; i<Math.round(Math.random() * 3); i++) {
@@ -66,7 +541,8 @@ const createMoon = (planetId) => {
         id: getUniqueID(),
         planetId,
         size: 3,
-        strength: { value: 0, time: 0, max: 50},
+        owner: null,
+        strength: { value: 0, time: 0, max: 50, speed: 1},
         distance: 15+(Math.round(Math.random() * 3) * 6),
         angle: {
             value: Math.random() * 2 * Math.PI,
@@ -80,10 +556,9 @@ const createMoon = (planetId) => {
 
 const ships = {}
 const connections = {}
-
 const users = {}
 
-for(let i=0; i<10; i++) {
+for(let i=0; i<40; i++) {
     createSun()
 }
 
@@ -107,32 +582,84 @@ server.on("upgrade", function upgrade(request, socket, head) {
 });
 
 // what to do after a connection is established
-wss.on("connection", (ctx) => {
-    // print number of active connections
-    console.log("connected", wss.clients.size);
-    const cnxId = getUniqueID()
-    connections[cnxId] = ctx
-    ctx.send(JSON.stringify({time, type: 'userUpdated', user: {id: cnxId }}));
+wss.on("connection", (socket) => {
 
-    const giftedPlanet = Object.entries(Object.entries(suns)[0][1].planets)[0][1];
-    giftedPlanet.owner = cnxId
-    giftedPlanet.strength = { value: 0, time}
+    let connectionId = null
+    let userId = null
 
     // handle message events
     // receive a message and echo it back
-    ctx.on("message", (message) => {
+    socket.on("message", (message) => {
         console.log(`Received message => ${message}`);
 
         data = JSON.parse(message)
         if(data.type==='ping') {
-            ctx.send(JSON.stringify({time, type: 'ping' }));
+            socket.send(JSON.stringify({time, type: 'ping' }));
+        } else if(data.type==='auth') {
+            if(data.user && data.secret && users[data.user] && users[data.user].secret === data.secret) {
+                userId = data.user
+                connectionId = getUniqueID()
+                connections[connectionId] = {
+                    socket: socket,
+                    user: userId
+                }
+
+            } else {
+                connectionId = getUniqueID()
+                connections[connectionId] = {
+                    socket: socket,
+                    user: data.user
+                }
+
+                userId = getUniqueID()
+                users[userId] = {
+                    secret: getUniqueID()+"-"+getUniqueID()
+                }
+
+                const giftSun = Object.entries(suns)[Math.floor(Math.random()*Object.entries(suns).length)][1]
+                const giftPlanet = Object.entries(giftSun.planets)[Math.floor(Math.random()*Object.entries(giftSun.planets).length)][1]
+                giftPlanet.owner = userId
+                giftPlanet.strength.value = 50
+                giftPlanet.strength.time = time            
+
+                socket.send(JSON.stringify({time, type: 'auth', user: userId, secret: users[userId].secret, gift:{giftSun, giftPlanet}}));
+
+                Object.entries(connections).forEach(([connectionId, connection]) => {
+                    connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId: giftSun.id, planet: giftPlanet }));
+                })
+
+            }
+
+        } else if(data.type==='solarNavigation') {
+            const sun = suns[data.sunId]
+
+            if(sun.owner===userId) {
+                Object.entries(ships).forEach(([shipId, ship]) => {
+                    let shipX = ship.x + (8 * (time - ship.angle.time) * Math.cos(ship.angle.value))
+                    let shipY = ship.y + (8 * (time - ship.angle.time) * Math.sin(ship.angle.value))
+                                
+                    const sunDistance = getDistance(shipX, shipY, sun.x, sun.y)
+
+                    if(sunDistance<200) {
+                        ship.x = shipX
+                        ship.y = shipY
+                        ship.angle.time=time
+                        ship.angle.value=data.angle + (Math.random() * Math.PI/20) - Math.PI/40
+                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                            connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
+                        })
+                    }
+                })
+            }
+        
+
         } else if(data.type==='launchFighter') {
 
             if(data.sourceType==='moon') {
-                const planet = planets[data.source.planet.id]
-                const moon = planet.moons[data.source.moon.id]
+                const planet = planets[data.source.planetId]
+                const moon = planet.moons[data.source.moonId]
 
-                if(moon.owner === cnxId) {
+                if(moon.owner === userId) {
                     const sun = suns[planet.sunId]
                     const planetAngle = planet.angle.value + (time * Math.PI/planet.distance * planet.angle.speed);
                     const planetX = sun.x + (planet.distance * Math.sin(planetAngle));
@@ -142,68 +669,68 @@ wss.on("connection", (ctx) => {
                     const moonX = planetX + (moon.distance * Math.sin(moonAngle));
                     const moonY = planetY + (moon.distance * Math.cos(moonAngle));
 
-                    const moonStrength = moon.strength.value + Math.min(moon.strength.max, ((time-moon.strength.time) * 1));
+                    const moonStrength = Math.min(moon.strength.max, moon.strength.value + ((time-moon.strength.time) * moon.strength.speed));
                     if(moonStrength > 5) {
 
-                        moon.strength = {
-                            value: -5 + moonStrength,
-                            time
-                        }
+                        moon.strength.value = -5 + moonStrength
+                        moon.strength.time = time
 
                         const ship = {
                             id: getUniqueID(),
-                            owner: cnxId, 
+                            owner: connectionId, 
                             x: moonX + ((3+ (Math.random() * 2)) * Math.cos(data.angle)),
                             y: moonY + ((3+ (Math.random() * 2)) * Math.sin(data.angle)),
                             moonId: moon.id,
                             source: "moon",
                             angle: {
-                                value: data.angle + (Math.random() * Math.PI/200) - Math.PI/100,
+                                value: data.angle + (Math.random() * Math.PI/20) - Math.PI/40,
                                 time: time
                             }
                         }
                         ships[ship.id] = ship
-                        Object.entries(connections).forEach(([ctxId, ctx]) => {
-                            ctx.send(JSON.stringify({time, type: 'shipUpdate', ship }));
-                            ctx.send(JSON.stringify({time, type: 'moonUpdate', sunId: sun.id, planetId: planet.id, moon }));
+                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                            connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
+                            connection.socket.send(JSON.stringify({time, type: 'moonUpdate', sunId: sun.id, planetId: planet.id, moon }));
                         })
                     }
                 }
             }
 
             if(data.sourceType==='planet') {
-                const planet = planets[data.source.planet.id]
-
-                if(planet.owner === cnxId) {
-                    const sun = suns[planet.sunId]
+                const planet = planets[data.source.planetId]
+                if(planet.owner === userId) {
+                    const sun = suns[data.source.sunId]
                     const planetAngle = planet.angle.value + (time * Math.PI/planet.distance * planet.angle.speed);
                     const planetX = sun.x + (planet.distance * Math.sin(planetAngle));
                     const planetY = sun.y + (planet.distance * Math.cos(planetAngle));
 
-                    const planetStrength = planet.strength.value + Math.min(100, ((time-planet.strength.time) * 1));
+                    const planetStrength = Math.min(planet.strength.max, planet.strength.value + ((time-planet.strength.time) * planet.strength.speed));
                     if(planetStrength > 5) {
 
-                        planet.strength = {
-                            value: -5 + planetStrength,
-                            time
-                        }
-
+                        planet.strength.value = -5 + planetStrength
+                        planet.strength.time = time                      
+                        
                         const ship = {
                             id: getUniqueID(),
-                            owner: cnxId, 
-                            x: planetX + ((8+ (Math.random() * 5)) * Math.cos(data.angle)),
-                            y: planetY + ((8+ (Math.random() * 5)) * Math.sin(data.angle)),
+                            owner: userId, 
                             planetId: planet.id,
                             source: "planet",
+
+                            // TODO add this to the location object
+                            x: planetX + ((8+ (Math.random() * 5)) * Math.cos(data.angle)),
+                            y: planetY + ((8+ (Math.random() * 5)) * Math.sin(data.angle)),
+
+                            // TODO rename this location
                             angle: {
-                                value: data.angle + (Math.random() * Math.PI/200) - Math.PI/100,
+                                value: data.angle + (Math.random() * Math.PI/20) - Math.PI/40,
                                 time: time
                             }
                         }
                         ships[ship.id] = ship
-                        Object.entries(connections).forEach(([ctxId, ctx]) => {
-                            ctx.send(JSON.stringify({time, type: 'shipUpdate', ship }));
-                            ctx.send(JSON.stringify({time, type: 'planetUpdate', sunId: sun.id, planet }));
+                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                            console.log(connection)
+                            connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
+                            connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId: sun.id, planet }));
                         })
                     }
                 }
@@ -214,12 +741,12 @@ wss.on("connection", (ctx) => {
     });
 
     // handle close event
-    ctx.on("close", () => {
+    socket.on("close", () => {
         console.log("closed", wss.clients.size);
     });
 
     // sent a message that we're good to proceed
-    ctx.send(JSON.stringify({time, type: 'update', suns, ships}));
+    socket.send(JSON.stringify({time, type: 'update', suns, ships}));
 });
 
 var getDistance = (x1, y1, x2, y2) => {
@@ -236,8 +763,8 @@ setInterval(() => {
         Object.entries(suns).forEach(([sunId, sun]) => {
             const sunDistance = getDistance(shipX, shipY, sun.x, sun.y)
             if(sunDistance < sun.size) {
-                Object.entries(connections).forEach(([ctxId, ctx]) => {
-                    ctx.send(JSON.stringify({time, type: 'shipDestroyed', cause:'sun', sunId, ship }));
+                Object.entries(connections).forEach(([connectionId, connection]) => {
+                    connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'sun', sunId, ship }));
                     delete ships[shipId]
                 })
             } else if (sunDistance < 1000) {
@@ -248,26 +775,43 @@ setInterval(() => {
                     const planetDistance = getDistance(shipX, shipY, planetX, planetY)
                     if(planetDistance < planet.size && ship.planetId !== planetId) {
 
-                        // TODO weaken if this isn't owner by ship.owner
-                        const planetStrength = (planet.owner ? planet.strength.value + Math.min(planet.strength.max, ((time-planet.strength.time) * 1)) : 0)
+                        const planetStrength = (planet.owner ? Math.min(planet.strength.max, planet.strength.value + ((time-planet.strength.time) * planet.strength.speed)) : 0)
                         if(!planet.owner || planet.owner === ship.owner) {
-                            planet.strength = {
-                                value: 5 + planetStrength,
-                                time
-                            }
+                            planet.strength.value = 5 + planetStrength
+                            planet.strength.time = time
                             planet.owner = ship.owner
+                            if(planet.owner !== sun.owner) {
+                                sun.owner = ship.owner
+                                Object.entries(connections).forEach(([connectionId, connection]) => {
+                                    connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
+                                })
+                            }
+
                         } else {
-                            planet.strength = {
-                                value: -5 + planetStrength,
-                                time
+                            if(planetStrength < 5) {
+                                planet.strength.value = 5
+                                planet.strength.time = time
+                                planet.owner = ship.owner
+
+                                if(planet.owner !== sun.owner) {
+                                    sun.owner = ship.owner
+                                    Object.entries(connections).forEach(([connectionId, connection]) => {
+                                        connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
+                                    })
+                                }
+        
+                            } else {
+                                planet.strength.value = -5 + planetStrength
+                                planet.strength.time = time
                             }
                         }
                         delete ships[shipId]
 
-                        Object.entries(connections).forEach(([ctxId, ctx]) => {
-                            ctx.send(JSON.stringify({time, type: 'shipDestroyed', cause:'planet', sunId, planetId, ship }));
-                            ctx.send(JSON.stringify({time, type: 'planetUpdate', sunId, planet }));
+                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                            connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'planet', sunId, planetId, ship }));
+                            connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId, planet }));
                         })
+
                     } else if (planetDistance < 500) {
                         Object.entries(planet.moons).forEach(([moonId, moon]) => {
                             const moonAngle = moon.angle.value + (time * Math.PI/moon.distance * moon.angle.speed);
@@ -275,19 +819,42 @@ setInterval(() => {
                             const moonY = planetY + (moon.distance * Math.cos(moonAngle))
                             const moonDistance = getDistance(shipX, shipY, moonX, moonY)
                             if(moonDistance < moon.size && ship.moonId !== planetId) {
-                                Object.entries(connections).forEach(([ctxId, ctx]) => {
-                                    ctx.send(JSON.stringify({time, type: 'shipDestroyed', cause:'moon', sunId, planetId, moonId, ship }));
 
-                                    // TODO weaken if this isn't owner by ship.owner
-                                    moon.strength = {
-                                        value: 5 + (moon.owner ? moon.strength.value + Math.min(moon.strength.max, ((time-moon.strength.time) * 1)) : 0),
-                                        time
-                                    }
+                                const moonStrength = (moon.owner ? Math.min(moon.strength.max, moon.strength.value + ((time-moon.strength.time) * moon.strength.speed)) : 0)
+                                if(!moon.owner || moon.owner === ship.owner) {
+                                    moon.strength.value = 5 + moonStrength
+                                    moon.strength.time = time
                                     moon.owner = ship.owner
-                                    ctx.send(JSON.stringify({time, type: 'moonUpdate', sunId, planetId, moon }));
-        
-                                    delete ships[shipId]
+                                    if(moon.owner !== sun.owner) {
+                                        sun.owner = ship.owner
+                                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                                            connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
+                                        })
+                                    }                                            
+                            } else {
+                                    if(moonStrength<5) {
+                                        moon.strength.value = 5
+                                        moon.strength.time = time
+                                        moon.owner = ship.owner
+
+                                        if(moon.owner !== sun.owner) {
+                                            sun.owner = ship.owner
+                                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                                                connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
+                                            })
+                                        }                                            
+                                    } else {
+                                        moon.strength.value = -5 + moonStrength
+                                        moon.strength.time = time
+                                    }
+                                }
+                                delete ships[shipId]
+
+                                Object.entries(connections).forEach(([connectionId, connection]) => {
+                                    connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'moon', sunId, planetId, moonId, ship }));
+                                    connection.socket.send(JSON.stringify({time, type: 'moonUpdate', sunId, planetId, moon }));
                                 })
+                            
                             }
                         })
                     }

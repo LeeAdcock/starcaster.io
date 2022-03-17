@@ -34,6 +34,14 @@ function App() {
     ws.onopen = () => {
       console.log('Connected to socket');
 
+      // Send authentication if we have it, otherwise request
+      if(localStorage.getItem('user')) {
+        send({type:'auth', user: localStorage.getItem('user'), secret: localStorage.getItem('secret')})
+        setUser({id: localStorage.getItem('user')})
+      } else {
+        send({type:'auth'})
+      }
+
       // TODO cancel this later
       setInterval(() => {
         send({type:'ping'})
@@ -48,6 +56,12 @@ function App() {
             setTime(msg.time)
         }
 
+        if(msg.type==='auth') {
+            localStorage.setItem('user', msg.user)
+            localStorage.setItem('secret', msg.secret)
+            setUser({id:msg.user})
+        }
+
         if(msg.type==='update') {
             if(msg.suns) {
                 setSuns(msg.suns)
@@ -58,21 +72,23 @@ function App() {
             }
         }
         if(msg.type==='moonUpdate') {
-            sunsRef.current[msg.sunId].planets[msg.planetId].moons[msg.moon.id] = msg.moon
+            sunsRef.current[msg.sunId].planets[msg.planetId].moons[msg.moon.id].owner = msg.moon.owner
+            sunsRef.current[msg.sunId].planets[msg.planetId].moons[msg.moon.id].strength = msg.moon.strength
+            setSuns(sunsRef.current)
+        }
+        if(msg.type==='sunUpdate') {
+            sunsRef.current[msg.sun.id].owner = msg.sun.owner
             setSuns(sunsRef.current)
         }
         if(msg.type==='planetUpdate') {
 
-            console.log(sunsRef.current)
-            sunsRef.current[msg.sunId].planets[msg.planet.id] = msg.planet
+            sunsRef.current[msg.sunId].planets[msg.planet.id].owner = msg.planet.owner
+            sunsRef.current[msg.sunId].planets[msg.planet.id].strength = msg.planet.strength
             setSuns(sunsRef.current)
         }
         if(msg.type==='shipUpdate') {
             ships[msg.ship.id] = msg.ship
             setShips(ships)
-        }
-        if(msg.type==='userUpdated') {
-            setUser(msg.user)
         }
         if(msg.type==='shipDestroyed') {
             delete ships[msg.ship.id]
@@ -100,6 +116,7 @@ function App() {
         ships={ships}
         user={user}
         launchFighter={(sourceType, source, angle) => {send({type:'launchFighter', sourceType, source, angle})}}
+        solarNavigation={(sunId, angle) => {send({type:'solarNavigation', sunId, angle})}}
     />
   );
 }
