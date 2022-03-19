@@ -1,10 +1,10 @@
 import React, {useEffect, useState, useRef} from 'react';
-
+import Toolbar from './components/Toolbar.js'
 const stars = []
 for(let x=0; x<1000; x++) {
     stars.push({
-        x: Math.random() * 10000,
-        y: Math.random() * 10000,
+        x: (Math.random() * 30000) - 10000,
+        y: (Math.random() * 30000) - 10000,
         color: ['#FFFFE0', '#FFFACD', '#FAFAD2', '#FFFF99', '#FFFFCC'][Math.round(Math.random() * 5)]
     })
 }
@@ -15,12 +15,38 @@ var getDistance = (x1, y1, x2, y2) => {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
+
+
 function Galaxy(props) {
   
   const timeRef = useRef(0);
   const sunsRef = useRef([]);
   const shipsRef = useRef([]);
   const userRef = useRef({});
+
+  let vehicleType = useRef('fighter');
+
+  let zoomscale = useRef(1);
+  let translateX = useRef( 0);
+  let translateY = useRef(0);
+
+  var initViewport = () => {
+    // Initialize user viewport
+    Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+        Object.entries(sun.planets).forEach(([planetId, planet]) => {
+            if(planet.owner === userRef.current.id) {
+                let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
+                let planetX = sun.x + (planet.distance * Math.sin(planetAngle));
+                let planetY = sun.y + (planet.distance * Math.cos(planetAngle));
+
+                const canvas = document.getElementById('galaxy_canvas');
+                translateX.current = -planetX + canvas.width/2;
+                translateY.current = -planetY + canvas.height/2;
+            }
+        })
+    })    
+    zoomscale.current = 1
+}
 
   useEffect(() => {
     setInterval( () => { timeRef.current += .1 }, 100)
@@ -31,7 +57,11 @@ function Galaxy(props) {
   }, [props.time])
 
   useEffect(() => {
+    const isInitialLoad = (sunsRef.current.length===0)
     sunsRef.current = props.suns
+    if(isInitialLoad) {
+        initViewport()
+    }
   }, [props.suns])
 
   useEffect(() => {
@@ -44,16 +74,13 @@ function Galaxy(props) {
 
   useEffect(() => {
 
-    const canvas = document.getElementById('galaxy');
+    const canvas = document.getElementById('galaxy_canvas');
     const ctx = canvas.getContext('2d');
 
     // borrowed from https://gist.github.com/dzhang123/2a3a611b3d75a45a3f41
     let svg = document.createElementNS("http://www.w3.org/2000/svg",'svg');
     let xform = svg.createSVGMatrix();
 
-    let zoomscale = 1.0;
-    let translateX = 0;
-    let translateY = 0;
     let lastX=canvas.width/2, lastY=canvas.height/2;
     let dragStart,dragged;
 
@@ -129,29 +156,54 @@ function Galaxy(props) {
         dragged = true;
         if (dragStart){
           var pt = ctx.transformedPoint(lastX,lastY);
-          translateX += pt.x-dragStart.x
-          translateY += pt.y-dragStart.y
+          translateX.current += pt.x-dragStart.x
+          translateY.current += pt.y-dragStart.y
           dragStart = pt
-        }
+       }
     },false);
 
     canvas.addEventListener('mouseup',function(evt){
         dragStart = null;
+        console.log(evt)
 
         ctx.save()
-        ctx.translate(translateX,translateY)   
-        ctx.scale(zoomscale,zoomscale)        
+        ctx.translate(translateX.current,translateY.current)   
+        ctx.scale(zoomscale.current,zoomscale.current)
         var pt = ctx.transformedPoint(lastX,lastY);
         ctx.restore()
+
+        Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
+            if(ship.type==='carrier') {
+                let shipX = ship.x + (ship.speed * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
+                let shipY = ship.y + (ship.speed * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+
+                const shipDistance = getDistance(shipX, shipY, pt.x, pt.y)
+                if(shipDistance < 8 && ship.owner === userRef.current.id) {
+                    const angle = Math.atan2(pt.y - shipY, pt.x - shipX)
+                    props.launch(vehicleType.current, "carrier", {shipId}, evt.shiftKey?10:1, angle)
+                }
+            } else if(ship.type==='commander') {
+                let shipX = ship.x + (ship.speed * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
+                let shipY = ship.y + (ship.speed * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+
+                const shipDistance = getDistance(shipX, shipY, pt.x, pt.y)
+                if(shipDistance < 8 && ship.owner === userRef.current.id) {
+                    const angle = Math.atan2(pt.y - shipY, pt.x - shipX)
+                    props.navigate('commander', {shipId}, angle)
+                }
+            }
+
+        })
 
         Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
             const sunDistance = getDistance(sun.x, sun.y, pt.x, pt.y)
             if(sunDistance<sun.size) {
                 if(sun.owner === userRef.current.id) {
                     const angle = Math.atan2(pt.y - sun.y, pt.x - sun.x)
-                    props.solarNavigation(sun.id, angle)
+                    props.navigate('sun', {sunId}, angle)
                 }
             } else {
+
                 Object.entries(sun.planets).forEach(([planetId, planet]) => {
 
                     let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
@@ -163,7 +215,7 @@ function Galaxy(props) {
                     if(planetDistance<planet.size) {
                         if(planet.owner === userRef.current.id) {
                             const angle = Math.atan2(pt.y - planetY, pt.x - planetX)
-                            props.launchFighter("planet", {sunId: sun.id, planetId: planet.id}, angle)
+                            props.launch(vehicleType.current, "planet", {sunId: sun.id, planetId: planet.id}, evt.shiftKey?10:1, angle)
                         }
                     } else if(planetDistance<500) {
 
@@ -177,7 +229,7 @@ function Galaxy(props) {
             
                             if(moonDistance<moon.size && moon.owner === userRef.current.id) {
                                 const angle = Math.atan2(pt.y - moonY, pt.x - moonX)
-                                props.launchFighter("moon", {sunId: sun.id, planetId: planet.id, moonId: moon.id}, angle)
+                                props.launch(vehicleType.current, "moon", {sunId: sun.id, planetId: planet.id, moonId: moon.id}, evt.shiftKey?10:1,angle)
                             }
                         })
                     }
@@ -190,23 +242,22 @@ function Galaxy(props) {
     var zoom = function(clicks) {
 
         ctx.save()
-        ctx.translate(translateX,translateY)   
-        ctx.scale(zoomscale,zoomscale)        
+        ctx.translate(translateX.current,translateY.current)   
+        ctx.scale(zoomscale.current,zoomscale.current)
         var pt1 = ctx.transformedPoint(lastX,lastY);
         ctx.restore()
 
-        zoomscale += clicks
-        zoomscale = Math.min(Math.max(zoomscale, .1), 8)
+        zoomscale.current += clicks
+        zoomscale.current = Math.min(Math.max(zoomscale.current, .1), 8)
         
         ctx.save()
-        ctx.translate(translateX,translateY)   
-        ctx.scale(zoomscale,zoomscale)        
+        ctx.translate(translateX.current,translateY.current)   
+        ctx.scale(zoomscale.current,zoomscale.current)        
         var pt2 = ctx.transformedPoint(lastX,lastY);
         ctx.restore()
 
-        translateX += zoomscale * (pt2.x - pt1.x);
-        translateY += zoomscale * (pt2.y - pt1.y);
-
+        translateX.current += zoomscale.current * (pt2.x - pt1.x);
+        translateY.current += zoomscale.current * (pt2.y - pt1.y);
     }
 
     var handleScroll = function(evt){
@@ -217,6 +268,12 @@ function Galaxy(props) {
   
     canvas.addEventListener('DOMMouseScroll',handleScroll,false);
     canvas.addEventListener('mousewheel',handleScroll,false);
+
+    window.addEventListener("keypress", (e) => {
+        if(e.code==='Space') {
+            initViewport()
+        }
+    }, false);
 
     const rgb = (r, g, b) => "rgb("+r+","+g+","+b+")"
 
@@ -230,8 +287,8 @@ function Galaxy(props) {
 
         // User view window
         ctx.save()
-        ctx.translate(translateX,translateY)   
-        ctx.scale(zoomscale,zoomscale)
+        ctx.translate(translateX.current,translateY.current)   
+        ctx.scale(zoomscale.current,zoomscale.current)
 
         // Background stars
         stars.forEach(star => {
@@ -245,12 +302,11 @@ function Galaxy(props) {
         Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
 
             // Sun name
-            if(zoomscale<1) {
-                ctx.font = '35pt Calibri';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = 'yellow';
-                ctx.fillText(sun.name, sun.x, sun.y-250);
-            }
+            ctx.font = '35pt Calibri';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgb(255, 255, 0, ' + 1/(10*zoomscale.current) + ')';
+            const farthestPlanet = Object.entries(sun.planets).map(([planetId, planet]) => planet.distance).reduce((a, b) => Math.max(a, b), 0)
+            ctx.fillText(sun.name, sun.x, sun.y-farthestPlanet-50);
 
             // Sun
             ctx.beginPath();
@@ -259,7 +315,7 @@ function Galaxy(props) {
             ctx.fill();
 
             // Draw orbits
-            if(zoomscale>.3) {
+            if(zoomscale.current>.3) {
                 Object.entries(sun.planets).forEach(([planetId, planet]) => {
                     let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
                     let planetX = sun.x + (planet.distance * Math.sin(planetAngle))
@@ -272,7 +328,7 @@ function Galaxy(props) {
                     ctx.stroke();
 
                     // Moon orbits
-                    if(zoomscale>.15) {
+                    if(zoomscale.current>.15) {
                         Object.entries(planet.moons).forEach(([moonId, moon]) => {
                             ctx.beginPath();
                             ctx.arc(planetX, planetY, moon.distance, 0, 2 * Math.PI);
@@ -285,21 +341,84 @@ function Galaxy(props) {
         })
 
         // Ships
-        if(zoomscale>.1) {
+        if(zoomscale.current>.1) {
             Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
-                let shipX = ship.x + (8 * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
-                let shipY = ship.y + (8 * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+                let shipX = ship.x + (ship.speed * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
+                let shipY = ship.y + (ship.speed * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+
+                // Smoother ship turning
+                let shipAngle = ship.angle.value
+                if(ship.prevAngle) {
+                    let turnAngle = ship.angle.value - ship.prevAngle.value
+                    while(turnAngle>Math.PI) turnAngle -= Math.PI * 2
+                    while(turnAngle<-Math.PI) turnAngle += Math.PI * 2   
+                    shipAngle -= (turnAngle/10) * Math.max(0, 10-(timeRef.current - ship.prevAngle.time)*20)
+                }
 
                 ctx.save();
                 ctx.translate(shipX, shipY);
-                ctx.rotate(ship.angle.value);
-                ctx.beginPath();
-                ctx.moveTo(-4, -2);
-                ctx.lineTo(4, 0);
-                ctx.lineTo(-4, 2);
+                ctx.rotate(shipAngle);
 
                 ctx.fillStyle = ship.owner === userRef.current.id ? "green" : "red";
-                ctx.fill();
+                if(ship.type==='fighter') {
+                    ctx.beginPath();
+                    ctx.moveTo(-4, -2);
+                    ctx.lineTo(4, 0);
+                    ctx.lineTo(-4, 2);
+                    ctx.fill();
+                } else if(ship.type==='missle') {
+                    ctx.beginPath();
+                    ctx.moveTo(-2, -.5);
+                    ctx.lineTo(-2, .5);
+                    ctx.lineTo(2, .5);
+                    ctx.lineTo(3, 0);
+                    ctx.lineTo(2, -.5);
+                    ctx.fill();
+                } else if(ship.type==='carrier') {
+                    ctx.beginPath();
+                    ctx.moveTo(3*-2, 3*(-2+-.5));
+                    ctx.lineTo(3*-2, 3*(-2+.5));
+                    ctx.lineTo(3*2, 3*(-2+.5));
+                    ctx.lineTo(3*3, 3*(-2+0));
+                    ctx.lineTo(3*2, 3*(-2+-.5));
+                    ctx.fill();
+    
+                    ctx.beginPath();
+                    ctx.moveTo(3*-2, 3*(2+-.5));
+                    ctx.lineTo(3*-2, 3*(2+.5));
+                    ctx.lineTo(3*2, 3*(2+.5));
+                    ctx.lineTo(3*3, 3*(2+0));
+                    ctx.lineTo(3*2, 3*(2+-.5));
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 7.5, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    ctx.rotate(Math.PI/2);
+                    ctx.font = '5pt Calibri';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(ship.strength, 0, 2);                
+
+                } else if(ship.type==='commander') {
+                    ctx.beginPath();
+                    ctx.moveTo(-3,-3);
+                    ctx.lineTo(-3,3);
+                    ctx.lineTo(3,3);
+                    ctx.lineTo(3,-3);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 3.5, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    ctx.arc(0, 0, 2.5, 0, 2 * Math.PI);
+                    ctx.lineWidth = "0.5";
+                    ctx.strokeStyle = "black"
+                    ctx.stroke();
+
+                }
                 ctx.restore()  
             })
         }
@@ -314,7 +433,7 @@ function Galaxy(props) {
                 let planetY = sun.y + (planet.distance * Math.cos(planetAngle))
 
                 // Planet shadow
-                if(zoomscale>1) {
+                if(zoomscale.current>1) {
                     var grd = ctx.createRadialGradient(planetX, planetY, 0, planetX, planetY, planet.size*2);
                     grd.addColorStop(0, "rgb(0,0,0,1)");
                     grd.addColorStop(1, "rgb(0,0,0,0)");
@@ -331,7 +450,7 @@ function Galaxy(props) {
                 ctx.fill();
 
                 // Planet strength
-                if(zoomscale>.75 && planetStrength> 0) { 
+                if(zoomscale.current>.75 && planetStrength> 0) { 
                     ctx.font = '5pt Calibri';
                     ctx.textAlign = 'center';
                     ctx.fillStyle = 'white';
@@ -339,7 +458,7 @@ function Galaxy(props) {
                 }
 
                 // Draw moons
-                if(zoomscale>.15) {
+                if(zoomscale.current>.15) {
                     Object.entries(planet.moons).forEach(([moonId, moon]) => {
                         const moonAngle = moon.angle.value + (timeRef.current * Math.PI/moon.distance * moon.angle.speed);
                         const moonStrength = moon.owner ? Math.min(moon.strength.max, moon.strength.value + ((timeRef.current-moon.strength.time) * moon.strength.speed)) : 0
@@ -347,7 +466,7 @@ function Galaxy(props) {
                         const moonY = planetY + (moon.distance * Math.cos(moonAngle))
 
                         // Moon shadow
-                        if(zoomscale>1) {
+                        if(zoomscale.current>1) {
                             var grd = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, moon.size*2);
                             grd.addColorStop(0, "rgb(0,0,0,1)");
                             grd.addColorStop(1, "rgb(0,0,0,0)");
@@ -364,7 +483,7 @@ function Galaxy(props) {
                         ctx.fill();
 
                         // Moon strength
-                        if(zoomscale>.75 && moonStrength> 0) { 
+                        if(zoomscale.current>.75 && moonStrength> 0) { 
                             ctx.font = '3pt Calibri';
                             ctx.textAlign = 'center';
                             ctx.fillStyle = 'white';
@@ -403,8 +522,11 @@ function Galaxy(props) {
   }, []);
 
   return (
-      <div>
-        <canvas id="galaxy"></canvas>
+    <div id='galaxy'>
+        <Toolbar
+            changeVehicle={type => vehicleType.current = type}
+        ></Toolbar>
+        <canvas id="galaxy_canvas"></canvas>
     </div>
   );
 }

@@ -26,8 +26,8 @@ function App() {
     };
 
   useEffect(() => {
-
-    const ws = new WebSocket('wss://port-8080-galaxy-lee508578.preview.codeanywhere.com/');
+      const ws = new WebSocket((window.location.protocol === "https:" ? 'wss' : 'ws') +'://port-8080-galaxy-lee508578.preview.codeanywhere.com/api');
+      //const ws = new WebSocket((window.location.protocol === "https:" ? 'wss' : 'ws') +'://'+window.location.hostname+'/api');
 
     socket.current = ws
 
@@ -50,7 +50,7 @@ function App() {
       // receive messages
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
-        console.log(msg)
+        console.log('received', msg);
 
         if(msg.time) {
             setTime(msg.time)
@@ -115,8 +115,8 @@ function App() {
         suns={suns} 
         ships={ships}
         user={user}
-        launchFighter={(sourceType, source, angle) => {send({type:'launchFighter', sourceType, source, angle})}}
-        solarNavigation={(sunId, angle) => {send({type:'solarNavigation', sunId, angle})}}
+        launch={(shipType, sourceType, source, count, angle) => {send({type:'launch', shipType, sourceType, source, count, angle})}}
+        navigate={(sourceType, source, angle) => {send({type:'navigate', sourceType, source, angle})}}
     />
   );
 }
