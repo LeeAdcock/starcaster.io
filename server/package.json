@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node src/server.js",
+    "lint": "npx prettier --write src/**",
     "package": "npm shrinkwrap && zip -r artifact.zip ./ -x .git "
   },
   "author": "",

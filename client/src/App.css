@@ -1,6 +1,10 @@
-html, body, div#root, div#galaxy, div#galaxy canvas {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-    background: black;
+html,
+body,
+div#root,
+div#galaxy,
+div#galaxy canvas {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  background: black;
 }
