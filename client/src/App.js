@@ -45,7 +45,7 @@ function App() {
       // TODO cancel this later
       setInterval(() => {
         send({type:'ping'})
-      }, 2500)
+      }, 30000) // 30 seconds
 
       // receive messages
       ws.onmessage = (event) => {

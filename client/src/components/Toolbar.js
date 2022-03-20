@@ -1,6 +1,5 @@
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import ToggleButton from 'react-bootstrap/ToggleButton';
-import DropdownButton from 'react-bootstrap/DropdownButton';
 import Button from 'react-bootstrap/Button';
 import Dropdown from 'react-bootstrap/Dropdown';
 
@@ -22,9 +21,9 @@ const planitaryShieldDisplayNames = {
 }
 
 const missileDisplayNames = {
-    'missile': 'Missile (1)',
-    'missile2': 'Nuclear Missile (5)',
-    'missile3': 'Deatomizer Missile (50)',
+    'missile': 'Missile (2)',
+    'missile2': 'Nuclear Missile (25)',
+    'missile3': 'Deatomizer Missile (70)',
 }
 
 function Toolbar(props) {
@@ -89,7 +88,7 @@ function Toolbar(props) {
 
             <Dropdown as={ButtonGroup} 
                 style={{marginLeft: '3px'}}
-                onSelect={e=>{setPlanitaryShield(e); setRadioValue('shield'); props.changeVehicle(e)}}
+                onSelect={e=>{setPlanitaryShield(e); setRadioValue('planitary-shield'); props.changeVehicle(e)}}
                 >
                 <ToggleButton
                     key='planitary-shield'
@@ -118,7 +117,6 @@ function Toolbar(props) {
 
             <Dropdown as={ButtonGroup} 
                 style={{marginLeft: '3px'}}
-                onSelect={setCarrierValue}
                 onSelect={e=>{setCarrierValue(e); setRadioValue('carrier'); props.changeVehicle(e)}}
                 >
                 <ToggleButton

@@ -60,9 +60,10 @@ const shipTypes = {
     },
     "missile2": {
         splashDamage: true,
-        splashDamageDistance: 20,
+        splashDamageDistance: 15,
+        spreads: false,        
         strength: 1,
-        cost: 5,
+        cost: 25,
         shipDamage: 7,
         planetDamage: 7,
         people: 0,
@@ -71,12 +72,12 @@ const shipTypes = {
     },
     "missile3": {
         splashDamage: true,
-        splashDamageDistance: 40,
+        splashDamageDistance: 30,
         spreads: true,        
         strength: 1,
-        cost: 50,
-        shipDamage: 7,
-        planetDamage: 7,
+        cost: 70,
+        shipDamage: 15,
+        planetDamage: 15,
         people: 0,
         speed: 12,
         width: 2,
@@ -190,7 +191,7 @@ wss.on("connection", (socket) => {
                 giftPlanet.strength.value = 50
                 giftPlanet.strength.time = Date.now()/1000
 
-                Object.entries(connections).forEach(([connectionId, connection]) => {
+                Object.values(connections).forEach(connection => {
                     connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId: giftSun.id, planet: giftPlanet }));
                 })
             }
@@ -210,6 +211,7 @@ wss.on("connection", (socket) => {
                             const sunDistance = getDistance(shipX, shipY, sun.x, sun.y)
 
                             if(sunDistance<200) {
+                                ship.lastTouch = time
                                 ship.x = shipX
                                 ship.y = shipY
                                 ship.prevAngle = {
@@ -218,7 +220,7 @@ wss.on("connection", (socket) => {
                                 }
                                 ship.angle.time=time
                                 ship.angle.value=data.angle + (Math.random() * Math.PI/20) - Math.PI/40
-                                Object.entries(connections).forEach(([connectionId, connection]) => {
+                                Object.values(connections).forEach(connection => {
                                     connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
                                 })
                             }
@@ -238,6 +240,7 @@ wss.on("connection", (socket) => {
                             const shipDistance = getDistance(shipX, shipY, commanderX, commanderY)
 
                             if(shipDistance<150) {
+                                ship.lastTouch = time
                                 ship.x = shipX
                                 ship.y = shipY
                                 ship.prevAngle = {
@@ -246,7 +249,7 @@ wss.on("connection", (socket) => {
                                 }
                                 ship.angle.time=time
                                 ship.angle.value=data.angle + (Math.random() * Math.PI/20) - Math.PI/40
-                                Object.entries(connections).forEach(([connectionId, connection]) => {
+                                Object.values(connections).forEach(connection => {
                                     connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
                                 })
                             }
@@ -266,7 +269,7 @@ wss.on("connection", (socket) => {
                     planet.strength.max = 125
                     planet.strength.time = time
 
-                    Object.entries(connections).forEach(([connectionId, connection]) => {
+                    Object.values(connections).forEach(connection => {
                         connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId: sun.id, planet }));
                     })
                 } else if(data.shieldType==='shield2' && planet.strength.max == 125 && planetStrength > 100) {
@@ -274,7 +277,7 @@ wss.on("connection", (socket) => {
                     planet.strength.max = 150
                     planet.strength.time = time
 
-                    Object.entries(connections).forEach(([connectionId, connection]) => {
+                    Object.values(connections).forEach(connection => {
                         connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId: sun.id, planet }));
                     })
                 } else if(data.shieldType==='shield3' && planet.strength.max == 150 && planetStrength > 125) {
@@ -282,7 +285,7 @@ wss.on("connection", (socket) => {
                     planet.strength.max = 200
                     planet.strength.time = time
 
-                    Object.entries(connections).forEach(([connectionId, connection]) => {
+                    Object.values(connections).forEach(connection => {
                         connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId: sun.id, planet }));
                     })
                 }
@@ -303,6 +306,7 @@ wss.on("connection", (socket) => {
             
                             const ship = {
                                 id: getUniqueID(),
+                                lastTouch: time,
                                 owner: userId, 
                                 type: data.shipType,
                                 x: carrierX + ((8+ (Math.random() * 2)) * Math.cos(data.angle)),
@@ -317,11 +321,11 @@ wss.on("connection", (socket) => {
 
                             Object.assign(ship, shipTypes[data.shipType])
                             ships[ship.id] = ship
-                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                            Object.values(connections).forEach(connection => {
                                 connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
                             })
                         }
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                        Object.values(connections).forEach(connection => {
                             connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship: carrier }));
                         })
                     }
@@ -351,6 +355,7 @@ wss.on("connection", (socket) => {
 
                             const ship = {
                                 id: getUniqueID(),
+                                lastTouch: time,
                                 owner: userId, 
                                 type: data.shipType,
                                 x: moonX + ((3+ (Math.random() * 2)) * Math.cos(data.angle)),
@@ -365,11 +370,11 @@ wss.on("connection", (socket) => {
 
                             Object.assign(ship, shipTypes[data.shipType])
                             ships[ship.id] = ship
-                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                            Object.values(connections).forEach(connection => {
                                 connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
                             })
                         }
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                        Object.values(connections).forEach(connection => {
                             connection.socket.send(JSON.stringify({time, type: 'moonUpdate', sunId: sun.id, planetId: planet.id, moon }));
                         })
                     }
@@ -393,6 +398,7 @@ wss.on("connection", (socket) => {
                             
                             const ship = {
                                 id: getUniqueID(),
+                                lastTouch: time,
                                 owner: userId, 
                                 planetId: planet.id,
                                 source: "planet",
@@ -411,11 +417,11 @@ wss.on("connection", (socket) => {
 
                             Object.assign(ship, shipTypes[data.shipType])
                             ships[ship.id] = ship
-                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                            Object.values(connections).forEach(connection => {
                                 connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
                             })
                         }
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
+                        Object.values(connections).forEach(connection => {
                             connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId: sun.id, planet }));
                         })
                     }
@@ -438,91 +444,110 @@ var getDistance = (x1, y1, x2, y2) => {
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-setInterval(() => {
+var collisionDetection = () => {
     let time = Date.now()/1000
 
-    Object.entries(ships).forEach(([shipId, ship]) => {
-        let shipX = ship.x + (ship.speed * (time - ship.angle.time) * Math.cos(ship.angle.value))
-        let shipY = ship.y + (ship.speed * (time - ship.angle.time) * Math.sin(ship.angle.value))
+    let timeout = time - (60 * 20) // 20 minutes
+    Object.values(ships).forEach(ship => {
+        if(ship.lastTouch < timeout) {
+            delete ships[ship.id]
+            Object.values(connections).forEach(connection => {
+                connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', ship }));
+            })
+        }
+    })
 
-        Object.entries(ships).forEach(([shipId2, ship2]) => {
-            if(shipId2!=shipId) {
-                let shipX2 = ship2.x + (ship2.speed * (time - ship2.angle.time) * Math.cos(ship2.angle.value))
-                let shipY2 = ship2.y + (ship2.speed * (time - ship2.angle.time) * Math.sin(ship2.angle.value))
-                const shipDistance = getDistance(shipX2, shipY2, shipX, shipY)
-                
-                // Match speed of commander?
-                if(ship.type==='commander' && ship.owner === ship2.owner && shipDistance<100)
+    let shipLocations = {}
+    Object.values(ships).forEach(ship => {
+        let x = ship.x + (ship.speed * (time - ship.angle.time) * Math.cos(ship.angle.value))
+        let y = ship.y + (ship.speed * (time - ship.angle.time) * Math.sin(ship.angle.value))
+        shipLocations[ship.id] = [x,y]
+    })
+
+    Object.values(ships).forEach(ship => {
+        let [shipX, shipY] = shipLocations[ship.id]
+
+        Object.values(ships).forEach(ship2 => {
+            if(ship2.id!=ship.id) {
+                let [shipX2, shipY2] = shipLocations[ship2.id]
+
+                // Lazy calculation of the distance first
+                if(shipX2 > shipX - 100 && shipX2 < shipX + 100 && shipY2 > shipY - 100 && shipY2 < shipY + 100)
                 {
-                    if(ship.speed != ship2.speed) {
-                        ship2.speed = ship.speed
-                        ship2.x=shipX2
-                        ship2.y=shipY2
-                        ship2.angle.time=time
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
-                            connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship:ship2 }));
-                        })
-                    }
-                }
 
-                // Join carrier?
-                if(ship.type==='carrier' && ship.owner === ship2.owner && shipDistance< ship.width)
-                {
-                    if(ship.strength + ship2.strength <= 75) {
-                        ship.strength += ship2.strength
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
-                            connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship:ship }));
-                            connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', ship:ship2 }));
-                        })
-                        delete ships[ship2.id]
-                    }
-                }                
-
-                // Collide?
-                if(shipDistance < ship.width+ship2.width && ship.owner !== ship2.owner) {
-                    ship.strength -= ship2.shipDamage
-                    ship2.strength -= ship.shipDamage
+                    const shipDistance = getDistance(shipX2, shipY2, shipX, shipY)
                     
-                    if(ship.strength <= 0) {
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
-                            connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'collision', ship }));
-                        })
-                        delete ships[shipId]    
-                    } else {
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
-                            connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
-                        })
-                    }
-                    if(ship2.strength <= 0) {
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
-                            connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'collision', ship:ship2 }));
-                        })
-                        delete ships[shipId2]    
-                    } else {
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
-                            connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship2 }));
-                        })
+                    // Match speed of commander?
+                    if(ship.type==='commander' && ship.owner === ship2.owner && shipDistance<100)
+                    {
+                        if(ship.speed != ship2.speed) {
+                            ship2.speed = ship.speed
+                            ship2.x=shipX2
+                            ship2.y=shipY2
+                            ship2.angle.time=time
+                            Object.values(connections).forEach(connection => {
+                                connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship:ship2 }));
+                            })
+                        }
                     }
 
-                    if(ship.splashDamage || ship2.splashDamage) {
-                        let makeSplashDamage = (ship, shipDamage, splashDamageDistance, spreads) => {
-                            let shipX = ship.x + (ship.speed * (time - ship.angle.time) * Math.cos(ship.angle.value))
-                            let shipY = ship.y + (ship.speed * (time - ship.angle.time) * Math.sin(ship.angle.value))
-                            Object.entries(ships).forEach(([shipId3, ship3]) => {
-                                if(ship3.owner !== originalShip.owner) {
-                                    let shipX3 = ship3.x + (ship3.speed * (time - ship3.angle.time) * Math.cos(ship3.angle.value))
-                                    let shipY3 = ship3.y + (ship3.speed * (time - ship3.angle.time) * Math.sin(ship3.angle.value))
+                    // Join carrier?
+                    if(ship.type==='carrier' && ship.owner === ship2.owner && shipDistance< ship.width)
+                    {
+                        if(ship.strength + ship2.strength <= 75) {
+                            ship.strength += ship2.strength
+                            Object.values(connections).forEach(connection => {
+                                connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship:ship }));
+                                connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', ship:ship2 }));
+                            })
+                            delete ships[ship2.id]
+                        }
+                    }                
+
+                    // Collide?
+                    if(shipDistance < ship.width+ship2.width && ship.owner !== ship2.owner) {
+                        ship.strength -= ship2.shipDamage
+                        ship2.strength -= ship.shipDamage
+                        
+                        if(ship.strength <= 0) {
+                            Object.values(connections).forEach(connection => {
+                                connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'collision', ship }));
+                            })
+                            delete ships[ship.id]    
+                        } else {
+                            Object.values(connections).forEach(connection => {
+                                connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship }));
+                            })
+                        }
+                        if(ship2.strength <= 0) {
+                            Object.values(connections).forEach(connection => {
+                                connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'collision', ship:ship2 }));
+                            })
+                            delete ships[ship2.id]    
+                        } else {
+                            Object.values(connections).forEach(connection => {
+                                connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship2 }));
+                            })
+                        }
+
+                        if(ship.splashDamage || ship2.splashDamage) {
+                            let makeSplashDamage = (ship, shipDamage, splashDamageDistance, spreads) => {
+                            [shipX2, shipY2] = shipLocations[ship.id]
+
+                                Object.values(ships).forEach(ship3 => {
+                                    let [shipX3, shipY3] = shipLocations[ship3.id]
+
                                     const shipDistance = getDistance(shipX3, shipY3, shipX, shipY)
                                     console.log(shipDistance, splashDamageDistance)
                                     if(shipDistance < splashDamageDistance) {
                                         ship3.strength -= shipDamage
                                         if(ship3.strength <= 0) {
-                                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                                            Object.values(connections).forEach(connection => {
                                                 connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'collision', ship:ship3 }));
                                             })
-                                            delete ships[shipId3]
+                                            delete ships[ship3.id]
                                         } else {
-                                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                                            Object.values(connections).forEach(connection => {
                                                 connection.socket.send(JSON.stringify({time, type: 'shipUpdate', ship:ship3 }));
                                             })                
                                         }
@@ -530,30 +555,29 @@ setInterval(() => {
                                             makeSplashDamage(ship3, true, shipDamage, splashDamageDistance, spreads)
                                         }
                                     }
-                                }
-                            })                                
-                        }
-                        makeSplashDamage(ship, Math.max(ship.shipDamage,ship2.shipDamage), Math.max(ship.splashDamageDistance||0, ship2.splashDamageDistance||0), ship.spreads || ship2.spreads)
-                    }                    
+                                })                                
+                            }
+                            makeSplashDamage(ship, Math.max(ship.shipDamage,ship2.shipDamage), Math.max(ship.splashDamageDistance||0, ship2.splashDamageDistance||0), ship.spreads || ship2.spreads)
+                        }                    
+                    }
                 }
-    
             }
         })
     
-        Object.entries(suns).forEach(([sunId, sun]) => {
+        Object.values(suns).forEach(sun => {
             const sunDistance = getDistance(shipX, shipY, sun.x, sun.y)
             if(sunDistance < sun.size) {
-                Object.entries(connections).forEach(([connectionId, connection]) => {
-                    connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'sun', sunId, ship }));
-                    delete ships[shipId]
+                Object.values(connections).forEach(connection => {
+                    connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'sun', sunId: sun.id, ship }));
+                    delete ships[ship.id]
                 })
             } else if (sunDistance < 1000) {
-                Object.entries(sun.planets).forEach(([planetId, planet]) => {
+                Object.values(sun.planets).forEach(planet => {
                     const planetAngle = planet.angle.value + (time * Math.PI/planet.distance * planet.angle.speed);
                     const planetX = sun.x + (planet.distance * Math.sin(planetAngle))
                     const planetY = sun.y + (planet.distance * Math.cos(planetAngle))
                     const planetDistance = getDistance(shipX, shipY, planetX, planetY)
-                    if(planetDistance < planet.size && ship.planetId !== planetId) {
+                    if(planetDistance < planet.size && ship.planetId !== planet.id) {
 
                         const planetStrength = (planet.owner ? Math.min(planet.strength.max, planet.strength.value + ((time-planet.strength.time) * planet.strength.speed)) : 0)
                         if(!planet.owner || planet.owner === ship.owner) {
@@ -563,7 +587,7 @@ setInterval(() => {
                                 planet.owner = ship.owner
                                 if(planet.owner !== sun.owner) {
                                     sun.owner = ship.owner
-                                    Object.entries(connections).forEach(([connectionId, connection]) => {
+                                    Object.values(connections).forEach(connection => {
                                         connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
                                     })
                                 }
@@ -581,7 +605,7 @@ setInterval(() => {
                                 }
                                 if(planet.owner !== sun.owner) {
                                     sun.owner = ship.owner
-                                    Object.entries(connections).forEach(([connectionId, connection]) => {
+                                    Object.values(connections).forEach(connection => {
                                         connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
                                     })
                                 }
@@ -591,20 +615,20 @@ setInterval(() => {
                                 planet.strength.time = time
                             }
                         }
-                        delete ships[shipId]
+                        delete ships[ship.id]
 
-                        Object.entries(connections).forEach(([connectionId, connection]) => {
-                            connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'planet', sunId, planetId, ship }));
-                            connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId, planet }));
+                        Object.values(connections).forEach(connection => {
+                            connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'planet', sunId:sun.id, planetId:planet.id, ship }));
+                            connection.socket.send(JSON.stringify({time, type: 'planetUpdate', sunId:sun.id, planet }));
                         })
 
                     } else if (planetDistance < 500) {
-                        Object.entries(planet.moons).forEach(([moonId, moon]) => {
+                        Object.values(planet.moons).forEach(moon => {
                             const moonAngle = moon.angle.value + (time * Math.PI/moon.distance * moon.angle.speed);
                             const moonX = planetX + (moon.distance * Math.sin(moonAngle))
                             const moonY = planetY + (moon.distance * Math.cos(moonAngle))
                             const moonDistance = getDistance(shipX, shipY, moonX, moonY)
-                            if(moonDistance < moon.size && ship.moonId !== planetId) {
+                            if(moonDistance < moon.size && ship.moonId !== planet.id) {
 
                                 const moonStrength = (moon.owner ? Math.min(moon.strength.max, moon.strength.value + ((time-moon.strength.time) * moon.strength.speed)) : 0)
                                 if(!moon.owner || moon.owner === ship.owner) {
@@ -614,7 +638,7 @@ setInterval(() => {
                                         moon.owner = ship.owner
                                         if(moon.owner !== sun.owner) {
                                             sun.owner = ship.owner
-                                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                                            Object.values(connections).forEach(connection => {
                                                 connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
                                             })
                                         }           
@@ -632,7 +656,7 @@ setInterval(() => {
                                         }
                                         if(moon.owner !== sun.owner) {
                                             sun.owner = ship.owner
-                                            Object.entries(connections).forEach(([connectionId, connection]) => {
+                                            Object.values(connections).forEach(connection => {
                                                 connection.socket.send(JSON.stringify({time, type: 'sunUpdate', sun }));
                                             })
                                         }                                            
@@ -641,11 +665,11 @@ setInterval(() => {
                                         moon.strength.time = time
                                     }
                                 }
-                                delete ships[shipId]
+                                delete ships[ship.id]
 
-                                Object.entries(connections).forEach(([connectionId, connection]) => {
-                                    connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'moon', sunId, planetId, moonId, ship }));
-                                    connection.socket.send(JSON.stringify({time, type: 'moonUpdate', sunId, planetId, moon }));
+                                Object.values(connections).forEach(connection => {
+                                    connection.socket.send(JSON.stringify({time, type: 'shipDestroyed', cause:'moon', sunId:sun.id, planetId:planet.id, moonId:moon.id, ship }));
+                                    connection.socket.send(JSON.stringify({time, type: 'moonUpdate', sunId:sun.id, planetId:planet.id, moon }));
                                 })
                             
                             }
@@ -656,6 +680,24 @@ setInterval(() => {
         })
 
     })
+
+    // Schedule the next detection
+    setTimeout(() => {
+        try {
+            collisionDetection()
+        } catch (e) {
+            console.log(e)
+        }
+    }, 200)
+}
+
+// Run the first detection
+setTimeout(() => {
+    try {
+        collisionDetection()
+    } catch (e) {
+        console.log(e)
+    }
 }, 200);
 
 server.listen(8080)

@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
 import Toolbar from './components/Toolbar.js'
 const stars = []
 for(let x=0; x<1000; x++) {
@@ -92,7 +92,7 @@ function Galaxy(props) {
     let xform = svg.createSVGMatrix();
 
     let lastX=canvas.width/2, lastY=canvas.height/2;
-    let dragStart,dragged;
+    let dragStart, dragged;
 
     ctx.getTransform = function(){ return xform; };
 
@@ -174,85 +174,94 @@ function Galaxy(props) {
 
     canvas.addEventListener('mouseup',function(evt){
         dragStart = null;
-        console.log(evt)
 
-        ctx.save()
-        ctx.translate(translateX.current,translateY.current)   
-        ctx.scale(zoomscale.current,zoomscale.current)
-        var pt = ctx.transformedPoint(lastX,lastY);
-        ctx.restore()
+        if(!dragged) {
 
-        Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
-            if(ship.type==='carrier') {
-                let shipX = ship.x + (ship.speed * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
-                let shipY = ship.y + (ship.speed * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+            ctx.save()
+            ctx.translate(translateX.current,translateY.current)   
+            ctx.scale(zoomscale.current,zoomscale.current)
+            var pt = ctx.transformedPoint(lastX,lastY);
+            ctx.restore()
 
-                const shipDistance = getDistance(shipX, shipY, pt.x, pt.y)
-                if(shipDistance < 8 && ship.owner === userRef.current.id) {
-                    const angle = Math.atan2(pt.y - shipY, pt.x - shipX)
-                    props.launch(vehicleType.current, "carrier", {shipId}, evt.shiftKey?10:1, angle)
-                }
-            } else if(ship.type==='commander') {
-                let shipX = ship.x + (ship.speed * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
-                let shipY = ship.y + (ship.speed * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+            Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
+                if(ship.type==='carrier' || ship.type==='carrier2' || ship.type==='carrier3') {
+                    let shipX = ship.x + (ship.speed * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
+                    let shipY = ship.y + (ship.speed * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
 
-                const shipDistance = getDistance(shipX, shipY, pt.x, pt.y)
-                if(shipDistance < 8 && ship.owner === userRef.current.id) {
-                    const angle = Math.atan2(pt.y - shipY, pt.x - shipX)
-                    props.navigate('commander', {shipId}, angle)
-                }
-            }
-
-        })
-
-        Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
-            const sunDistance = getDistance(sun.x, sun.y, pt.x, pt.y)
-            if(sunDistance<sun.size) {
-                if(sun.owner === userRef.current.id) {
-                    const angle = Math.atan2(pt.y - sun.y, pt.x - sun.x)
-                    props.navigate('sun', {sunId}, angle)
-                }
-            } else {
-
-                Object.entries(sun.planets).forEach(([planetId, planet]) => {
-
-                    let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
-                    let planetX = sun.x + (planet.distance * Math.sin(planetAngle));
-                    let planetY = sun.y + (planet.distance * Math.cos(planetAngle));
-
-                    const planetDistance = getDistance(planetX, planetY, pt.x, pt.y)
-                    
-                    if(planetDistance<planet.size) {
-                        if(planet.owner === userRef.current.id) {
-                            lastSun.current=sunId
-                            if(vehicleType.current==='shield' || vehicleType.current==='shield2' || vehicleType.current==='shield3')
-                            {
-                                props.planitaryShield(sun.id, planet.id, vehicleType.current)
-                            } else {
-                                const angle = Math.atan2(pt.y - planetY, pt.x - planetX)
-                                props.launch(vehicleType.current, "planet", {sunId: sun.id, planetId: planet.id}, evt.shiftKey?10:1, angle)
-                            }
-                        }
-                    } else if(planetDistance<500) {
-
-                        Object.entries(planet.moons).forEach(([moonId, moon]) => {
-
-                            let moonAngle = moon.angle.value + (timeRef.current * Math.PI/moon.distance * moon.angle.speed);
-                            let moonX = planetX + (moon.distance * Math.sin(moonAngle));
-                            let moonY = planetY + (moon.distance * Math.cos(moonAngle));
-            
-                            const moonDistance = getDistance(moonX, moonY, pt.x, pt.y)
-            
-                            if(moonDistance<moon.size && moon.owner === userRef.current.id) {
-                                lastSun.current=sunId
-                                const angle = Math.atan2(pt.y - moonY, pt.x - moonX)
-                                props.launch(vehicleType.current, "moon", {sunId: sun.id, planetId: planet.id, moonId: moon.id}, evt.shiftKey?10:1,angle)
-                            }
-                        })
+                    const shipDistance = getDistance(shipX, shipY, pt.x, pt.y)
+                    if(shipDistance < 8 && ship.owner === userRef.current.id) {
+                        const angle = Math.atan2(pt.y - shipY, pt.x - shipX)
+                        props.launch(vehicleType.current, "carrier", {shipId}, evt.shiftKey?10:1, angle)
                     }
-                })
-            }
-        })
+                } else if(ship.type==='commander') {
+                    let shipX = ship.x + (ship.speed * (timeRef.current - ship.angle.time) * Math.cos(ship.angle.value))
+                    let shipY = ship.y + (ship.speed * (timeRef.current - ship.angle.time) * Math.sin(ship.angle.value))
+
+                    const shipDistance = getDistance(shipX, shipY, pt.x, pt.y)
+                    if(shipDistance < 8 && ship.owner === userRef.current.id) {
+                        const angle = Math.atan2(pt.y - shipY, pt.x - shipX)
+                        props.navigate('commander', {shipId}, angle)
+                    }
+                }
+
+            })
+
+            Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+                const sunDistance = getDistance(sun.x, sun.y, pt.x, pt.y)
+                if(sunDistance<sun.size) {
+                    if(sun.owner === userRef.current.id) {
+                        const angle = Math.atan2(pt.y - sun.y, pt.x - sun.x)
+                        props.navigate('sun', {sunId}, angle)
+                    }
+                } else {
+
+                    Object.entries(sun.planets).forEach(([planetId, planet]) => {
+
+                        let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
+                        let planetX = sun.x + (planet.distance * Math.sin(planetAngle));
+                        let planetY = sun.y + (planet.distance * Math.cos(planetAngle));
+
+                        const planetDistance = getDistance(planetX, planetY, pt.x, pt.y)
+                        
+                        if(planetDistance<planet.size) {
+                            if(planet.owner === userRef.current.id) {
+                                lastSun.current=sunId
+                                if(vehicleType.current==='shield' || vehicleType.current==='shield2' || vehicleType.current==='shield3')
+                                {
+                                    props.planitaryShield(sun.id, planet.id, vehicleType.current)
+                                } else {
+                                    const angle = Math.atan2(pt.y - planetY, pt.x - planetX)
+                                    props.launch(vehicleType.current, "planet", {sunId: sun.id, planetId: planet.id}, evt.shiftKey?10:1, angle)
+                                }
+                            }
+                        } else if(planetDistance<500) {
+
+                            Object.entries(planet.moons).forEach(([moonId, moon]) => {
+
+                                let moonAngle = moon.angle.value + (timeRef.current * Math.PI/moon.distance * moon.angle.speed);
+                                let moonX = planetX + (moon.distance * Math.sin(moonAngle));
+                                let moonY = planetY + (moon.distance * Math.cos(moonAngle));
+                
+                                const moonDistance = getDistance(moonX, moonY, pt.x, pt.y)
+                
+                                if(moonDistance<moon.size && moon.owner === userRef.current.id) 
+                                {
+                                    if(vehicleType.current==='shield' || vehicleType.current==='shield2' || vehicleType.current==='shield3')
+                                    {
+                                        // no shields on moons
+                                        // TODO server validation
+                                    } else {    
+                                        lastSun.current=sunId
+                                        const angle = Math.atan2(pt.y - moonY, pt.x - moonX)
+                                        props.launch(vehicleType.current, "moon", {sunId: sun.id, planetId: planet.id, moonId: moon.id}, evt.shiftKey?10:1,angle)
+                                    }
+                                }
+                            })
+                        }
+                    })
+                }
+            })
+        }
 
     },false);
 
@@ -551,19 +560,19 @@ function Galaxy(props) {
         // Draw sun hase
         Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
             if(sun.owner) {
-                var grd = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, 750);
-                grd.addColorStop(0, sun.owner === userRef.current.id ? "rgb(0,255,0,.10)" : "rgb(255,0,0,.10)");
-                grd.addColorStop(1, "rgb(0,0,0,0)");
-                ctx.fillStyle = grd;
+                var ownerHase = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, 750);
+                ownerHase.addColorStop(0, sun.owner === userRef.current.id ? "rgb(0,255,0,.10)" : "rgb(255,0,0,.10)");
+                ownerHase.addColorStop(1, "rgb(0,0,0,0)");
+                ctx.fillStyle = ownerHase;
                 ctx.beginPath();
                 ctx.arc(sun.x, sun.y, 750, 0, 2 * Math.PI);
                 ctx.fill();
             }
 
-            var grd = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, 100);
-            grd.addColorStop(0, "rgb(255,255,0, .25)");
-            grd.addColorStop(1, "rgb(0,0,0,0)");
-            ctx.fillStyle = grd;
+            var sunHase = ctx.createRadialGradient(sun.x, sun.y, 0, sun.x, sun.y, 100);
+            sunHase.addColorStop(0, "rgb(255,255,0, .25)");
+            sunHase.addColorStop(1, "rgb(0,0,0,0)");
+            ctx.fillStyle = sunHase;
             ctx.beginPath();
             ctx.arc(sun.x, sun.y, 100, 0, 2 * Math.PI);
             ctx.fill();
