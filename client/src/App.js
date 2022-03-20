@@ -26,8 +26,8 @@ function App() {
     };
 
   useEffect(() => {
-      const ws = new WebSocket((window.location.protocol === "https:" ? 'wss' : 'ws') +'://port-8080-galaxy-lee508578.preview.codeanywhere.com/api');
-      //const ws = new WebSocket((window.location.protocol === "https:" ? 'wss' : 'ws') +'://'+window.location.hostname+'/api');
+      //const ws = new WebSocket((window.location.protocol === "https:" ? 'wss' : 'ws') +'://port-8080-galaxy-lee508578.preview.codeanywhere.com/api');
+      const ws = new WebSocket((window.location.protocol === "https:" ? 'wss' : 'ws') +'://'+window.location.hostname+'/api');
 
     socket.current = ws
 
@@ -117,6 +117,7 @@ function App() {
         user={user}
         launch={(shipType, sourceType, source, count, angle) => {send({type:'launch', shipType, sourceType, source, count, angle})}}
         navigate={(sourceType, source, angle) => {send({type:'navigate', sourceType, source, angle})}}
+        planitaryShield={(sunId, planetId, shieldType) => {send({type:'shield', sunId, planetId, shieldType})}}
     />
   );
 }

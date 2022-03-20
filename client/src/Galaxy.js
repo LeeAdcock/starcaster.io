@@ -30,21 +30,31 @@ function Galaxy(props) {
   let translateX = useRef( 0);
   let translateY = useRef(0);
 
+  let lastSun = useRef(null);
+
   var initViewport = () => {
     // Initialize user viewport
-    Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
-        Object.entries(sun.planets).forEach(([planetId, planet]) => {
-            if(planet.owner === userRef.current.id) {
-                let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
-                let planetX = sun.x + (planet.distance * Math.sin(planetAngle));
-                let planetY = sun.y + (planet.distance * Math.cos(planetAngle));
+    if(lastSun.current===null) {
+        Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+            Object.entries(sun.planets).forEach(([planetId, planet]) => {
+                if(planet.owner === userRef.current.id) {
+                    let planetAngle = planet.angle.value + (timeRef.current * Math.PI/planet.distance * planet.angle.speed);
+                    let planetX = sun.x + (planet.distance * Math.sin(planetAngle));
+                    let planetY = sun.y + (planet.distance * Math.cos(planetAngle));
 
-                const canvas = document.getElementById('galaxy_canvas');
-                translateX.current = -planetX + canvas.width/2;
-                translateY.current = -planetY + canvas.height/2;
-            }
+                    const canvas = document.getElementById('galaxy_canvas');
+                    translateX.current = -planetX + canvas.width/2;
+                    translateY.current = -planetY + canvas.height/2;
+
+                }
+            })
         })
-    })    
+    } else {
+        const canvas = document.getElementById('galaxy_canvas');
+        translateX.current = -sunsRef.current[lastSun.current].x + canvas.width/2;
+        translateY.current = -sunsRef.current[lastSun.current].y + canvas.height/2;
+    }
+    
     zoomscale.current = 1
 }
 
@@ -214,8 +224,14 @@ function Galaxy(props) {
                     
                     if(planetDistance<planet.size) {
                         if(planet.owner === userRef.current.id) {
-                            const angle = Math.atan2(pt.y - planetY, pt.x - planetX)
-                            props.launch(vehicleType.current, "planet", {sunId: sun.id, planetId: planet.id}, evt.shiftKey?10:1, angle)
+                            lastSun.current=sunId
+                            if(vehicleType.current==='shield' || vehicleType.current==='shield2' || vehicleType.current==='shield3')
+                            {
+                                props.planitaryShield(sun.id, planet.id, vehicleType.current)
+                            } else {
+                                const angle = Math.atan2(pt.y - planetY, pt.x - planetX)
+                                props.launch(vehicleType.current, "planet", {sunId: sun.id, planetId: planet.id}, evt.shiftKey?10:1, angle)
+                            }
                         }
                     } else if(planetDistance<500) {
 
@@ -228,6 +244,7 @@ function Galaxy(props) {
                             const moonDistance = getDistance(moonX, moonY, pt.x, pt.y)
             
                             if(moonDistance<moon.size && moon.owner === userRef.current.id) {
+                                lastSun.current=sunId
                                 const angle = Math.atan2(pt.y - moonY, pt.x - moonX)
                                 props.launch(vehicleType.current, "moon", {sunId: sun.id, planetId: planet.id, moonId: moon.id}, evt.shiftKey?10:1,angle)
                             }
@@ -360,13 +377,14 @@ function Galaxy(props) {
                 ctx.rotate(shipAngle);
 
                 ctx.fillStyle = ship.owner === userRef.current.id ? "green" : "red";
+                ctx.strokeStyle = ship.owner === userRef.current.id ? "green" : "red";
                 if(ship.type==='fighter') {
                     ctx.beginPath();
                     ctx.moveTo(-4, -2);
                     ctx.lineTo(4, 0);
                     ctx.lineTo(-4, 2);
                     ctx.fill();
-                } else if(ship.type==='missle') {
+                } else if(ship.type==='missile' || ship.type==='missile2' || ship.type==='missile3') {
                     ctx.beginPath();
                     ctx.moveTo(-2, -.5);
                     ctx.lineTo(-2, .5);
@@ -374,7 +392,23 @@ function Galaxy(props) {
                     ctx.lineTo(3, 0);
                     ctx.lineTo(2, -.5);
                     ctx.fill();
-                } else if(ship.type==='carrier') {
+                    if(ship.type==='missile2') {
+                        ctx.beginPath();
+                        ctx.lineTo(4, .5);
+                        ctx.lineTo(5, 0);
+                        ctx.lineTo(4, -.5);
+                        ctx.stroke();
+                    }
+                    if(ship.type==='missile3') {
+                        ctx.beginPath();
+                        ctx.lineTo(1, 1);
+                        ctx.lineTo(4, .5);
+                        ctx.lineTo(5, 0);
+                        ctx.lineTo(4, -.5);
+                        ctx.lineTo(1, -1);
+                        ctx.stroke();
+                    }
+                } else if(ship.type==='carrier' || ship.type==='carrier2' || ship.type==='carrier3') {
                     ctx.beginPath();
                     ctx.moveTo(3*-2, 3*(-2+-.5));
                     ctx.lineTo(3*-2, 3*(-2+.5));
@@ -448,6 +482,25 @@ function Galaxy(props) {
                 ctx.arc(planetX, planetY, planet.size, 0, 2 * Math.PI);
                 ctx.fillStyle = planet.owner ? (planet.owner===userRef.current.id ? rgb(0, 55+Math.min(200, planetStrength), 0) : rgb(55+Math.min(200, planetStrength), 0, 0)): "gray";
                 ctx.fill();
+
+                if(planet.strength.max>=125) {
+                    ctx.beginPath();
+                    ctx.arc(planetX, planetY, planet.size+2, 0, 2 * Math.PI);
+                    ctx.strokeStyle='rgb(255,255,0,.5)'
+                    ctx.stroke();
+                }
+                if(planet.strength.max>=150) {
+                    ctx.beginPath();
+                    ctx.arc(planetX, planetY, planet.size+4, 0, 2 * Math.PI);
+                    ctx.strokeStyle='rgb(255,255,0,.5)'
+                    ctx.stroke();
+                }
+                if(planet.strength.max>=175) {
+                    ctx.beginPath();
+                    ctx.arc(planetX, planetY, planet.size+6, 0, 2 * Math.PI);
+                    ctx.strokeStyle='rgb(255,255,0,.5)'
+                    ctx.stroke();
+                }
 
                 // Planet strength
                 if(zoomscale.current>.75 && planetStrength> 0) { 
@@ -525,6 +578,7 @@ function Galaxy(props) {
     <div id='galaxy'>
         <Toolbar
             changeVehicle={type => vehicleType.current = type}
+            centerViewport={initViewport}
         ></Toolbar>
         <canvas id="galaxy_canvas"></canvas>
     </div>
