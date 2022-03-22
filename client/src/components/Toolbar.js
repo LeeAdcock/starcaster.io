@@ -23,7 +23,7 @@ const planitaryShieldDisplayNames = {
 const missileDisplayNames = {
   missile: "Missile (2)",
   missile2: "Nuclear Missile (25)",
-  missile3: "Deatomizer Missile (70)",
+  missile3: "Deatomizer Missile (110)",
 };
 
 function Toolbar(props) {

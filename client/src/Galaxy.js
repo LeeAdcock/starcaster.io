@@ -23,6 +23,8 @@ function Galaxy(props) {
   const shipsRef = useRef([]);
   const userRef = useRef({});
 
+  const explosionsRef = useRef({});
+
   let vehicleType = useRef("fighter");
 
   let zoomscale = useRef(1);
@@ -70,6 +72,10 @@ function Galaxy(props) {
   useEffect(() => {
     timeRef.current = props.time;
   }, [props.time]);
+
+  useEffect(() => {
+    explosionsRef.current = props.explosions;
+  }, [props.explosions]);
 
   useEffect(() => {
     const isInitialLoad = sunsRef.current.length === 0;
@@ -429,10 +435,17 @@ function Galaxy(props) {
         ctx.fillText(sun.name, sun.x, sun.y - farthestPlanet - 50);
 
         // Sun
-        ctx.beginPath();
-        ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
-        ctx.fillStyle = "yellow";
-        ctx.fill();
+        if(sun.dark) {
+            ctx.beginPath();
+            ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
+            ctx.fillStyle = "dark gray";
+            ctx.fill();
+        } else {
+            ctx.beginPath();
+            ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
+            ctx.fillStyle = "yellow";
+            ctx.fill();
+        }
 
         // Draw orbits
         if (zoomscale.current > 0.3) {
@@ -711,7 +724,7 @@ function Galaxy(props) {
       });
 
       // Draw sun hase
-      Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+      Object.values(sunsRef.current).forEach((sun) => {
         if (sun.owner) {
           var ownerHase = ctx.createRadialGradient(
             sun.x,
@@ -734,21 +747,44 @@ function Galaxy(props) {
           ctx.fill();
         }
 
-        var sunHase = ctx.createRadialGradient(
-          sun.x,
-          sun.y,
-          0,
-          sun.x,
-          sun.y,
-          100
-        );
-        sunHase.addColorStop(0, "rgb(255,255,0, .25)");
-        sunHase.addColorStop(1, "rgb(0,0,0,0)");
-        ctx.fillStyle = sunHase;
-        ctx.beginPath();
-        ctx.arc(sun.x, sun.y, 100, 0, 2 * Math.PI);
-        ctx.fill();
+        if(!sun.dark) {
+            var sunHase = ctx.createRadialGradient(
+            sun.x,
+            sun.y,
+            0,
+            sun.x,
+            sun.y,
+            100
+            );
+            sunHase.addColorStop(0, "rgb(255,255,0, .25)");
+            sunHase.addColorStop(1, "rgb(0,0,0,0)");
+            ctx.fillStyle = sunHase;
+            ctx.beginPath();
+            ctx.arc(sun.x, sun.y, 100, 0, 2 * Math.PI);
+            ctx.fill();
+        }
       });
+
+      Object.values(explosionsRef.current).forEach((explosion) => {
+          console.log('draw', explosion)
+          var explosionHase = ctx.createRadialGradient(
+            explosion.x,
+            explosion.y,
+            0,
+            explosion.x,
+            explosion.y,
+            750
+          );
+          explosionHase.addColorStop(
+            0, "rgb(255,215,0,.10)"              
+          );
+          explosionHase.addColorStop(1, "rgb(0,0,0,0)");
+          ctx.fillStyle = explosionHase;
+          ctx.beginPath();
+          ctx.arc(explosion.x, explosion.y, Math.min(.5, timeRef.current - explosion.time)*25, 0, 2 * Math.PI);
+          ctx.fill();
+        
+    });
 
       ctx.restore();
     }, 100);

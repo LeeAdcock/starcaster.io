@@ -9,18 +9,6 @@ const { getUniqueID } = require("./id.js");
 const app = express();
 const server = http.createServer(app);
 
-// Backup each two minutes
-setInterval(() => {
-  let data = JSON.stringify({
-    time: Date.now() / 1000,
-    planets,
-    suns,
-    ships,
-    users,
-  });
-  fs.writeFileSync("backup.json", data);
-}, 1000 * 60 * 2);
-
 app.use(express.json());
 app.use(express.static("build"));
 
@@ -31,11 +19,11 @@ app.get("/health", (req, res) => {
   res.send("healthy");
 });
 
-const planets = {};
-const suns = {};
-const ships = {};
-const connections = {};
-const users = {};
+let planets = {};
+let suns = {};
+let ships = {};
+let connections = {};
+let users = {};
 
 const shipTypes = {
   fighter: {
@@ -73,7 +61,7 @@ const shipTypes = {
     splashDamageDistance: 30,
     spreads: true,
     strength: 1,
-    cost: 70,
+    cost: 110,
     shipDamage: 15,
     planetDamage: 15,
     people: 0,
@@ -118,15 +106,16 @@ const shipTypes = {
   },
 };
 
+// initialize galaxy
 for (let i = 0; i < 40; i++) {
-  const sun = createSun();
-  suns[sun.id] = sun;
-  Object.entries(sun.planets).forEach(([planetId, planet]) => {
-    planets[planetId] = planet;
-  });
+    const sun = createSun();
+    suns[sun.id] = sun;
+    Object.entries(sun.planets).forEach(([planetId, planet]) => {
+        planets[planetId] = planet;
+    });
 }
 
-// ws instance
+// web socket server instance
 const wss = new WebSocket.Server({ noServer: true });
 
 // handle upgrade of the request
@@ -169,6 +158,7 @@ wss.on("connection", (socket) => {
         users[data.user] &&
         users[data.user].secret === data.secret
       ) {
+        console.log('user authenticated')
         userId = data.user;
         connectionId = getUniqueID();
         connections[connectionId] = {
@@ -176,6 +166,7 @@ wss.on("connection", (socket) => {
           user: userId,
         };
       } else {
+        console.log('new user generated')
         connectionId = getUniqueID();
         connections[connectionId] = {
           socket: socket,
@@ -502,6 +493,7 @@ wss.on("connection", (socket) => {
 
       if (data.sourceType === "planet") {
         const planet = planets[data.source.planetId];
+        console.log(planet.owner, userId)
         if (planet.owner === userId) {
           const sun = suns[data.source.sunId];
           const planetAngle =
@@ -672,6 +664,7 @@ var collisionDetection = () => {
                   JSON.stringify({
                     time,
                     type: "shipDestroyed",
+                    explosion: true,
                     cause: "collision",
                     ship,
                   })
@@ -691,6 +684,7 @@ var collisionDetection = () => {
                   JSON.stringify({
                     time,
                     type: "shipDestroyed",
+                    explosion: true,
                     cause: "collision",
                     ship: ship2,
                   })
@@ -717,13 +711,13 @@ var collisionDetection = () => {
                 Object.values(ships).forEach((ship3) => {
                   let [shipX3, shipY3] = shipLocations[ship3.id];
 
+                  // TODO could shortcut with a lazy distance calculation first
                   const shipDistance = getDistance(
                     shipX3,
                     shipY3,
                     shipX,
                     shipY
                   );
-                  console.log(shipDistance, splashDamageDistance);
                   if (shipDistance < splashDamageDistance) {
                     ship3.strength -= shipDamage;
                     if (ship3.strength <= 0) {
@@ -732,12 +726,24 @@ var collisionDetection = () => {
                           JSON.stringify({
                             time,
                             type: "shipDestroyed",
+                            explosion: true,
                             cause: "collision",
                             ship: ship3,
                           })
                         );
                       });
                       delete ships[ship3.id];
+
+                      if (spreads) {
+                        makeSplashDamage(
+                          ship3,
+                          true,
+                          shipDamage,
+                          splashDamageDistance,
+                          spreads
+                        );
+                      }
+  
                     } else {
                       Object.values(connections).forEach((connection) => {
                         connection.socket.send(
@@ -748,15 +754,6 @@ var collisionDetection = () => {
                           })
                         );
                       });
-                    }
-                    if (spreads) {
-                      makeSplashDamage(
-                        ship3,
-                        true,
-                        shipDamage,
-                        splashDamageDistance,
-                        spreads
-                      );
                     }
                   }
                 });
@@ -784,12 +781,35 @@ var collisionDetection = () => {
             JSON.stringify({
               time,
               type: "shipDestroyed",
+              explosion: true,
               cause: "sun",
               sunId: sun.id,
               ship,
             })
           );
           delete ships[ship.id];
+
+          if(ship.type==='missile3') {
+              sun.dark = true
+              Object.values(sun.planets).forEach((planet) => {
+                planet.strength.speed = 1/2
+                Object.values(planet.moons).forEach((moon) => {
+                    moon.strength.speed = 1/4
+                  })
+                })
+
+            Object.values(connections).forEach((connection) => {
+                connection.socket.send(
+                  JSON.stringify({ time, type: "sunUpdate", sun })
+                );
+                Object.values(sun.planets).forEach((planet) => {
+                    connection.socket.send(JSON.stringify({ time, type: "planetUpdate", sunId: sun.id, planet }))
+                    Object.values(planet.moons).forEach((moon) => {
+                        connection.socket.send(JSON.stringify({ time, type: "moonUpdate", sunId: sun.id, planetId: planet.id, moon }))
+                    })
+                })
+              });
+          }
         });
       } else if (sunDistance < 1000) {
         Object.values(sun.planets).forEach((planet) => {
@@ -852,6 +872,7 @@ var collisionDetection = () => {
                 JSON.stringify({
                   time,
                   type: "shipDestroyed",
+                  explosion: planet.owner && planet.owner != ship.owner,
                   cause: "planet",
                   sunId: sun.id,
                   planetId: planet.id,
@@ -928,6 +949,7 @@ var collisionDetection = () => {
                     JSON.stringify({
                       time,
                       type: "shipDestroyed",
+                      explosion: moon.owner && planet.owner != ship.owner,
                       cause: "moon",
                       sunId: sun.id,
                       planetId: planet.id,

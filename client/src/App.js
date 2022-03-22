@@ -7,6 +7,7 @@ function App() {
   const [suns, setSuns] = useState([]);
   const [ships, setShips] = useState([]);
   const [user, setUser] = useState([]);
+  const [explosions, setExplosions] = useState([]);
 
   const sunsRef = useRef(suns);
   sunsRef.current = suns;
@@ -25,10 +26,10 @@ function App() {
   };
 
   useEffect(() => {
-    //const ws = new WebSocket((window.location.protocol === "https:" ? 'wss' : 'ws') +'://port-8080-galaxy-lee508578.preview.codeanywhere.com/api');
     const ws = new WebSocket(
       (window.location.protocol === "https:" ? "wss" : "ws") +
         "://" +
+        //"port-8080-galaxy-lee508578.preview.codeanywhere.com" +
         window.location.hostname +
         "/api"
     );
@@ -90,6 +91,7 @@ function App() {
         }
         if (msg.type === "sunUpdate") {
           sunsRef.current[msg.sun.id].owner = msg.sun.owner;
+          sunsRef.current[msg.sun.id].dark = msg.sun.dark;
           setSuns(sunsRef.current);
         }
         if (msg.type === "planetUpdate") {
@@ -104,8 +106,26 @@ function App() {
           setShips(ships);
         }
         if (msg.type === "shipDestroyed") {
+          let ship = ships[msg.ship.id]
           delete ships[msg.ship.id];
           setShips(ships);
+
+          if(msg.explosion) {
+            let shipX = ship.x +
+            ship.speed *
+                (msg.time - ship.angle.time) *
+                Math.cos(ship.angle.value);
+            let shipY = ship.y +
+                ship.speed *
+                (msg.time - ship.angle.time) *
+                Math.sin(ship.angle.value);
+
+            explosions[msg.ship.id] = {x:shipX, y: shipY, time:msg.time}
+            setExplosions(explosions)
+            setTimeout(() => {
+                delete explosions[msg.ship.id]
+            }, 500)    
+          }     
         }
       };
     };
@@ -128,6 +148,7 @@ function App() {
       suns={suns}
       ships={ships}
       user={user}
+      explosions={explosions}
       launch={(shipType, sourceType, source, count, angle) => {
         send({ type: "launch", shipType, sourceType, source, count, angle });
       }}
