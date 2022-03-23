@@ -422,6 +422,7 @@ function Galaxy(props) {
         ctx.fill();
       });
 
+      // Grid
       for(let x=-100000; x<100000; x+=10000) {
         ctx.strokeStyle = "rgb(13,202,240,.5)";
         ctx.beginPath();
@@ -436,12 +437,21 @@ function Galaxy(props) {
             ctx.lineTo(100000, y);
             ctx.stroke();
         }
-        ctx.font = "435pt Calibri";
-        ctx.textAlign = "left";
-        ctx.fillStyle =
-          "rgb(13,202,240, " + (1 / (40 * zoomscale.current + 2)) + ")";
-        ctx.fillText("SECTOR 12", 50, 435+50);        
-        
+        for(let x=-100000; x<100000; x+=1000) {
+            ctx.strokeStyle = "rgb(13,202,240," + (1 / (40 * zoomscale.current)) + ")";
+            ctx.beginPath();
+            ctx.moveTo(x, -100000);
+            ctx.lineTo(x, 100000);
+            ctx.stroke();
+            }
+            for(let y=-100000; y<100000; y+=1000) {
+                ctx.strokeStyle = "rgb(13,202,240," + (1 / (40 * zoomscale.current)) + ")";
+                ctx.beginPath();
+                ctx.moveTo(-100000, y);
+                ctx.lineTo(100000, y);
+                ctx.stroke();
+            }
+            
       // Draw suns
       Object.values(sunsRef.current).forEach(sun => {
         // Sun name

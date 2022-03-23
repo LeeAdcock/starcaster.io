@@ -24,6 +24,7 @@ let suns = {};
 let ships = {};
 let connections = {};
 let users = {};
+let aliances = {};
 
 const shipTypes = {
   fighter: {
@@ -50,7 +51,7 @@ const shipTypes = {
     shipDamage: 7,
     planetDamage: 7,
     people: 0,
-    speed: 12,
+    speed: 13,
     width: 2,
   },
   missile2: {
@@ -161,6 +162,31 @@ wss.on("connection", (socket) => {
     if (data.type === "ping") {
       socket.send(JSON.stringify({ time, type: "ping" }));
     } else if (data.type === "auth") {
+
+        let giftPlanet = () => {
+            const giftSun =
+            Object.entries(suns)[
+              Math.floor(Math.random() * Object.entries(suns).length)
+            ][1];
+          const giftPlanet = Object.entries(giftSun.planets)[
+            Math.floor(Math.random() * Object.entries(giftSun.planets).length)
+          ][1];
+          giftPlanet.owner = userId;
+          giftPlanet.strength.value = 50;
+          giftPlanet.strength.time = Date.now() / 1000;
+  
+          Object.values(connections).forEach((connection) => {
+            connection.socket.send(
+              JSON.stringify({
+                time,
+                type: "planetUpdate",
+                sunId: giftSun.id,
+                planet: giftPlanet,
+              })
+            );
+          });
+        }
+
       if (
         data.user &&
         data.secret &&
@@ -174,6 +200,22 @@ wss.on("connection", (socket) => {
           socket: socket,
           user: userId,
         };
+
+        // if you have no planets, gift one
+        let hasPlanet = false
+        Object.values(suns).forEach(sun => {
+            hasPlanet = hasPlanet || sun.owner === userId
+            Object.values(sun.planets).forEach(planet => {
+                hasPlanet = hasPlanet || planet.owner === userId
+                Object.values(planet.moons).forEach(moon => {
+                    hasPlanet = hasPlanet || moon.owner === userId
+                })            
+            })            
+        })
+        if(!hasPlanet) {
+            giftPlanet()
+        }
+
       } else {
         console.log("new user generated");
         connectionId = getUniqueID();
@@ -187,27 +229,7 @@ wss.on("connection", (socket) => {
           secret: getUniqueID() + "-" + getUniqueID(),
         };
 
-        const giftSun =
-          Object.entries(suns)[
-            Math.floor(Math.random() * Object.entries(suns).length)
-          ][1];
-        const giftPlanet = Object.entries(giftSun.planets)[
-          Math.floor(Math.random() * Object.entries(giftSun.planets).length)
-        ][1];
-        giftPlanet.owner = userId;
-        giftPlanet.strength.value = 50;
-        giftPlanet.strength.time = Date.now() / 1000;
-
-        Object.values(connections).forEach((connection) => {
-          connection.socket.send(
-            JSON.stringify({
-              time,
-              type: "planetUpdate",
-              sunId: giftSun.id,
-              planet: giftPlanet,
-            })
-          );
-        });
+        giftPlanet()
       }
       socket.send(
         JSON.stringify({
@@ -581,7 +603,7 @@ var getDistance = (x1, y1, x2, y2) => {
 var collisionDetection = () => {
   let time = Date.now() / 1000;
 
-  let timeout = time - 60 * 20; // 20 minutes
+  let timeout = time - (60 * 10); // 10 minutes
   Object.values(ships).forEach((ship) => {
     if (ship.lastTouch < timeout) {
       delete ships[ship.id];

@@ -152,7 +152,8 @@ function App() {
             right: "20px",
             color: "#0dcaf0",
             fontSize: "30px",
-            fontFamily: "Mulish"
+            fontFamily: "Mulish",
+            textShadow: "0px 0px 10px rgb(13 202 240)"
         }}>
             starcaster.io
         </div>
