@@ -106,26 +106,28 @@ function App() {
           setShips(ships);
         }
         if (msg.type === "shipDestroyed") {
-          let ship = ships[msg.ship.id]
+          let ship = ships[msg.ship.id];
           delete ships[msg.ship.id];
           setShips(ships);
 
-          if(msg.explosion) {
-            let shipX = ship.x +
-            ship.speed *
+          if (msg.explosion) {
+            let shipX =
+              ship.x +
+              ship.speed *
                 (msg.time - ship.angle.time) *
                 Math.cos(ship.angle.value);
-            let shipY = ship.y +
-                ship.speed *
+            let shipY =
+              ship.y +
+              ship.speed *
                 (msg.time - ship.angle.time) *
                 Math.sin(ship.angle.value);
 
-            explosions[msg.ship.id] = {x:shipX, y: shipY, time:msg.time}
-            setExplosions(explosions)
+            explosions[msg.ship.id] = { x: shipX, y: shipY, time: msg.time };
+            setExplosions(explosions);
             setTimeout(() => {
-                delete explosions[msg.ship.id]
-            }, 500)    
-          }     
+              delete explosions[msg.ship.id];
+            }, 500);
+          }
         }
       };
     };
@@ -143,22 +145,47 @@ function App() {
   }, []);
 
   return (
-    <Galaxy
-      time={time}
-      suns={suns}
-      ships={ships}
-      user={user}
-      explosions={explosions}
-      launch={(shipType, sourceType, source, count, angle) => {
-        send({ type: "launch", shipType, sourceType, source, count, angle });
-      }}
-      navigate={(sourceType, source, angle) => {
-        send({ type: "navigate", sourceType, source, angle });
-      }}
-      planitaryShield={(sunId, planetId, shieldType) => {
-        send({ type: "shield", sunId, planetId, shieldType });
-      }}
-    />
+    <>
+        <div style={{
+            position: "absolute",
+            top: "15px",
+            right: "20px",
+            color: "#0dcaf0",
+            fontSize: "30px",
+            fontFamily: "Mulish"
+        }}>
+            starcaster.io
+        </div>
+
+        <div style={{
+            position: "absolute",
+            top: "0px",
+            right: "0px",
+            left: "0px",
+            height: "80px",
+            backgroundColor: "#0dcaf022",
+            borderBottom: "1px solid #0dcaf033"
+        }}>
+            &nbsp;
+        </div>        
+
+        <Galaxy
+        time={time}
+        suns={suns}
+        ships={ships}
+        user={user}
+        explosions={explosions}
+        launch={(shipType, sourceType, source, count, angle) => {
+            send({ type: "launch", shipType, sourceType, source, count, angle });
+        }}
+        navigate={(sourceType, source, angle) => {
+            send({ type: "navigate", sourceType, source, angle });
+        }}
+        planitaryShield={(sunId, planetId, shieldType) => {
+            send({ type: "shield", sunId, planetId, shieldType });
+        }}
+        />
+    </>
   );
 }
 

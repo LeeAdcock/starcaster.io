@@ -21,7 +21,8 @@ const planitaryShieldDisplayNames = {
 };
 
 const missileDisplayNames = {
-  missile: "Missile (2)",
+  missile: "Missile (3)",
+  missile4: "Seaker Missile (10)",
   missile2: "Nuclear Missile (25)",
   missile3: "Deatomizer Missile (110)",
 };

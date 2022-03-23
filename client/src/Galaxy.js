@@ -36,8 +36,8 @@ function Galaxy(props) {
   var initViewport = () => {
     // Initialize user viewport
     if (lastSun.current === null) {
-      Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
-        Object.entries(sun.planets).forEach(([planetId, planet]) => {
+      Object.values(sunsRef.current).forEach(sun => {
+        Object.values(sun.planets).forEach(planet => {
           if (planet.owner === userRef.current.id) {
             let planetAngle =
               planet.angle.value +
@@ -214,7 +214,7 @@ function Galaxy(props) {
           var pt = ctx.transformedPoint(lastX, lastY);
           ctx.restore();
 
-          Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
+          Object.values(shipsRef.current).forEach(ship => {
             if (
               ship.type === "carrier" ||
               ship.type === "carrier2" ||
@@ -237,7 +237,7 @@ function Galaxy(props) {
                 props.launch(
                   vehicleType.current,
                   "carrier",
-                  { shipId },
+                  { shipId:ship.id },
                   evt.shiftKey ? 10 : 1,
                   angle
                 );
@@ -257,20 +257,20 @@ function Galaxy(props) {
               const shipDistance = getDistance(shipX, shipY, pt.x, pt.y);
               if (shipDistance < 8 && ship.owner === userRef.current.id) {
                 const angle = Math.atan2(pt.y - shipY, pt.x - shipX);
-                props.navigate("commander", { shipId }, angle);
+                props.navigate("commander", { shipId:ship.id }, angle);
               }
             }
           });
 
-          Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+          Object.values(sunsRef.current).forEach(sun => {
             const sunDistance = getDistance(sun.x, sun.y, pt.x, pt.y);
             if (sunDistance < sun.size) {
               if (sun.owner === userRef.current.id) {
                 const angle = Math.atan2(pt.y - sun.y, pt.x - sun.x);
-                props.navigate("sun", { sunId }, angle);
+                props.navigate("sun", { sunId:sun.id }, angle);
               }
             } else {
-              Object.entries(sun.planets).forEach(([planetId, planet]) => {
+              Object.values(sun.planets).forEach(planet => {
                 let planetAngle =
                   planet.angle.value +
                   ((timeRef.current * Math.PI) / planet.distance) *
@@ -287,7 +287,7 @@ function Galaxy(props) {
 
                 if (planetDistance < planet.size) {
                   if (planet.owner === userRef.current.id) {
-                    lastSun.current = sunId;
+                    lastSun.current = sun.id;
                     if (
                       vehicleType.current === "shield" ||
                       vehicleType.current === "shield2" ||
@@ -310,7 +310,7 @@ function Galaxy(props) {
                     }
                   }
                 } else if (planetDistance < 500) {
-                  Object.entries(planet.moons).forEach(([moonId, moon]) => {
+                  Object.values(planet.moons).forEach(moon => {
                     let moonAngle =
                       moon.angle.value +
                       ((timeRef.current * Math.PI) / moon.distance) *
@@ -332,7 +332,7 @@ function Galaxy(props) {
                         // no shields on moons
                         // TODO server validation
                       } else {
-                        lastSun.current = sunId;
+                        lastSun.current = sun.id;
                         const angle = Math.atan2(pt.y - moonY, pt.x - moonX);
                         props.launch(
                           vehicleType.current,
@@ -422,34 +422,54 @@ function Galaxy(props) {
         ctx.fill();
       });
 
+      for(let x=-100000; x<100000; x+=10000) {
+        ctx.strokeStyle = "rgb(13,202,240,.5)";
+        ctx.beginPath();
+        ctx.moveTo(x, -100000);
+        ctx.lineTo(x, 100000);
+        ctx.stroke();
+        }
+        for(let y=-100000; y<100000; y+=10000) {
+            ctx.strokeStyle = "rgb(13,202,240,.5)";
+            ctx.beginPath();
+            ctx.moveTo(-100000, y);
+            ctx.lineTo(100000, y);
+            ctx.stroke();
+        }
+        ctx.font = "435pt Calibri";
+        ctx.textAlign = "left";
+        ctx.fillStyle =
+          "rgb(13,202,240, " + (1 / (40 * zoomscale.current + 2)) + ")";
+        ctx.fillText("SECTOR 12", 50, 435+50);        
+        
       // Draw suns
-      Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
+      Object.values(sunsRef.current).forEach(sun => {
         // Sun name
         ctx.font = "35pt Calibri";
         ctx.textAlign = "center";
         ctx.fillStyle =
           "rgb(255, 255, 0, " + 1 / (10 * zoomscale.current) + ")";
-        const farthestPlanet = Object.entries(sun.planets)
-          .map(([planetId, planet]) => planet.distance)
+        const farthestPlanet = Object.values(sun.planets)
+          .map(planet => planet.distance)
           .reduce((a, b) => Math.max(a, b), 0);
         ctx.fillText(sun.name, sun.x, sun.y - farthestPlanet - 50);
 
         // Sun
-        if(sun.dark) {
-            ctx.beginPath();
-            ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
-            ctx.fillStyle = "dark gray";
-            ctx.fill();
+        if (sun.dark) {
+          ctx.beginPath();
+          ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
+          ctx.fillStyle = "dark gray";
+          ctx.fill();
         } else {
-            ctx.beginPath();
-            ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
-            ctx.fillStyle = "yellow";
-            ctx.fill();
+          ctx.beginPath();
+          ctx.arc(sun.x, sun.y, sun.size, 0, 2 * Math.PI);
+          ctx.fillStyle = "yellow";
+          ctx.fill();
         }
 
         // Draw orbits
         if (zoomscale.current > 0.3) {
-          Object.entries(sun.planets).forEach(([planetId, planet]) => {
+          Object.values(sun.planets).forEach(planet => {
             let planetAngle =
               planet.angle.value +
               ((timeRef.current * Math.PI) / planet.distance) *
@@ -465,7 +485,7 @@ function Galaxy(props) {
 
             // Moon orbits
             if (zoomscale.current > 0.15) {
-              Object.entries(planet.moons).forEach(([moonId, moon]) => {
+              Object.values(planet.moons).forEach(moon => {
                 ctx.beginPath();
                 ctx.arc(planetX, planetY, moon.distance, 0, 2 * Math.PI);
                 ctx.strokeStyle = "#3F3F3F55";
@@ -478,7 +498,7 @@ function Galaxy(props) {
 
       // Ships
       if (zoomscale.current > 0.1) {
-        Object.entries(shipsRef.current).forEach(([shipId, ship]) => {
+        Object.values(shipsRef.current).forEach(ship => {
           let shipX =
             ship.x +
             ship.speed *
@@ -516,7 +536,8 @@ function Galaxy(props) {
           } else if (
             ship.type === "missile" ||
             ship.type === "missile2" ||
-            ship.type === "missile3"
+            ship.type === "missile3" ||
+            ship.type === "missile4"
           ) {
             ctx.beginPath();
             ctx.moveTo(-2, -0.5);
@@ -593,8 +614,8 @@ function Galaxy(props) {
       }
 
       // Planets
-      Object.entries(sunsRef.current).forEach(([sunId, sun]) => {
-        Object.entries(sun.planets).forEach(([planetId, planet]) => {
+      Object.values(sunsRef.current).forEach(sun => {
+        Object.values(sun.planets).forEach(planet => {
           let planetAngle =
             planet.angle.value +
             ((timeRef.current * Math.PI) / planet.distance) *
@@ -667,7 +688,7 @@ function Galaxy(props) {
 
           // Draw moons
           if (zoomscale.current > 0.15) {
-            Object.entries(planet.moons).forEach(([moonId, moon]) => {
+            Object.values(planet.moons).forEach(moon => {
               const moonAngle =
                 moon.angle.value +
                 ((timeRef.current * Math.PI) / moon.distance) *
@@ -747,44 +768,47 @@ function Galaxy(props) {
           ctx.fill();
         }
 
-        if(!sun.dark) {
-            var sunHase = ctx.createRadialGradient(
+        if (!sun.dark) {
+          var sunHase = ctx.createRadialGradient(
             sun.x,
             sun.y,
             0,
             sun.x,
             sun.y,
             100
-            );
-            sunHase.addColorStop(0, "rgb(255,255,0, .25)");
-            sunHase.addColorStop(1, "rgb(0,0,0,0)");
-            ctx.fillStyle = sunHase;
-            ctx.beginPath();
-            ctx.arc(sun.x, sun.y, 100, 0, 2 * Math.PI);
-            ctx.fill();
+          );
+          sunHase.addColorStop(0, "rgb(255,255,0, .25)");
+          sunHase.addColorStop(1, "rgb(0,0,0,0)");
+          ctx.fillStyle = sunHase;
+          ctx.beginPath();
+          ctx.arc(sun.x, sun.y, 100, 0, 2 * Math.PI);
+          ctx.fill();
         }
       });
 
       Object.values(explosionsRef.current).forEach((explosion) => {
-          console.log('draw', explosion)
-          var explosionHase = ctx.createRadialGradient(
-            explosion.x,
-            explosion.y,
-            0,
-            explosion.x,
-            explosion.y,
-            750
-          );
-          explosionHase.addColorStop(
-            0, "rgb(255,215,0,.10)"              
-          );
-          explosionHase.addColorStop(1, "rgb(0,0,0,0)");
-          ctx.fillStyle = explosionHase;
-          ctx.beginPath();
-          ctx.arc(explosion.x, explosion.y, Math.min(.5, timeRef.current - explosion.time)*25, 0, 2 * Math.PI);
-          ctx.fill();
-        
-    });
+        console.log("draw", explosion);
+        var explosionHase = ctx.createRadialGradient(
+          explosion.x,
+          explosion.y,
+          0,
+          explosion.x,
+          explosion.y,
+          750
+        );
+        explosionHase.addColorStop(0, "rgb(255,215,0,.10)");
+        explosionHase.addColorStop(1, "rgb(0,0,0,0)");
+        ctx.fillStyle = explosionHase;
+        ctx.beginPath();
+        ctx.arc(
+          explosion.x,
+          explosion.y,
+          Math.min(0.5, timeRef.current - explosion.time) * 25,
+          0,
+          2 * Math.PI
+        );
+        ctx.fill();
+      });
 
       ctx.restore();
     }, 100);
