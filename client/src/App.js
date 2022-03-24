@@ -7,6 +7,7 @@ function App() {
   const [suns, setSuns] = useState([]);
   const [ships, setShips] = useState([]);
   const [user, setUser] = useState([]);
+  const [alliance, setAlliance] = useState({id:'', userIds:[]});
   const [explosions, setExplosions] = useState([]);
 
   const sunsRef = useRef(suns);
@@ -105,6 +106,9 @@ function App() {
           ships[msg.ship.id] = msg.ship;
           setShips(ships);
         }
+        if (msg.type === "allianceUpdate") {
+          setAlliance({id: msg.allianceId, userIds: msg.userIds});
+        }
         if (msg.type === "shipDestroyed") {
           let ship = ships[msg.ship.id];
           delete ships[msg.ship.id];
@@ -173,6 +177,7 @@ function App() {
         <Galaxy
         time={time}
         suns={suns}
+        alliance={alliance}
         ships={ships}
         user={user}
         explosions={explosions}
@@ -185,6 +190,10 @@ function App() {
         planitaryShield={(sunId, planetId, shieldType) => {
             send({ type: "shield", sunId, planetId, shieldType });
         }}
+        setAlliance={(alliance) => {
+            send({ type: "alliance", alliance });
+        }}
+        
         />
     </>
   );

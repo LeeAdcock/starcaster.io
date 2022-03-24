@@ -2,11 +2,16 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import ToggleButton from "react-bootstrap/ToggleButton";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
+import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
+
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faLocationCrosshairs } from "@fortawesome/free-solid-svg-icons";
+import { faLocationCrosshairs, faUserGroup } from "@fortawesome/free-solid-svg-icons";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const carrierDisplayNames = {
   carrier: "Carrier (75)",
@@ -33,6 +38,20 @@ function Toolbar(props) {
   const [carrierValue, setCarrierValue] = useState("carrier");
   const [planitaryShieldValue, setPlanitaryShield] = useState("shield");
   const [missileValue, setMissile] = useState("missile");
+
+  const [allianceValue, setAlliance] = useState("");
+  const [allianceDisplayed, setAllianceDisplayed] = useState(false);
+
+  useEffect(() => {
+    props.allianceChange(allianceValue)
+  }, [allianceValue])
+
+  useEffect(() => {
+      console.log('alliance update 2: ', props.alliance)
+      if(props.alliance.id) {
+          setAlliance(props.alliance.id)
+      }
+  }, [props.alliance])
 
   return (
     <div
@@ -202,6 +221,34 @@ function Toolbar(props) {
           <FontAwesomeIcon icon={faLocationCrosshairs} />
         </Button>
       </ButtonGroup>
+
+      <OverlayTrigger
+            placement="right"
+            delay={{ show: 250, hide: 400 }}
+            overlay={<Tooltip>Alliance</Tooltip>}
+        >
+      <InputGroup style={{
+            marginLeft: '10px',
+            display: "inline-flex",
+            width: "inherit"}}>
+
+        <Button variant={"outline-info"} id="button-addon1" onClick={()=>setAllianceDisplayed(!allianceDisplayed)}>
+            <FontAwesomeIcon icon={faUserGroup} />
+        </Button>
+
+        <Form.Control style={{
+                display: "inline",
+                transition: "width 1s, padding 1s",
+                width: allianceDisplayed ? "150px" : "0px",
+                padding: allianceDisplayed ? "6px 12px" : "0px 2px",
+                background: "none",
+                borderColor: '#0dcaf0',
+                color: '#0dcaf0' 
+            }} type="text" variant={"outline-info"} placeholder="Alliance" value={allianceValue} onChange={e=>setAlliance(e.target.value)}/>
+
+    </InputGroup>
+    </OverlayTrigger>
+
     </div>
   );
 }

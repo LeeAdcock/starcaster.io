@@ -22,6 +22,7 @@ function Galaxy(props) {
   const sunsRef = useRef([]);
   const shipsRef = useRef([]);
   const userRef = useRef({});
+  const allianceRef = useRef([]);
 
   const explosionsRef = useRef({});
 
@@ -38,7 +39,7 @@ function Galaxy(props) {
     if (lastSun.current === null) {
       Object.values(sunsRef.current).forEach(sun => {
         Object.values(sun.planets).forEach(planet => {
-          if (planet.owner === userRef.current.id) {
+          if (allianceRef.current.userIds.includes(planet.owner)) {
             let planetAngle =
               planet.angle.value +
               ((timeRef.current * Math.PI) / planet.distance) *
@@ -77,6 +78,10 @@ function Galaxy(props) {
     explosionsRef.current = props.explosions;
   }, [props.explosions]);
 
+  useEffect(() => {
+    allianceRef.current = props.alliance;
+  }, [props.alliance]);
+  
   useEffect(() => {
     const isInitialLoad = sunsRef.current.length === 0;
     sunsRef.current = props.suns;
@@ -232,7 +237,7 @@ function Galaxy(props) {
                   Math.sin(ship.angle.value);
 
               const shipDistance = getDistance(shipX, shipY, pt.x, pt.y);
-              if (shipDistance < 8 && ship.owner === userRef.current.id) {
+              if (shipDistance < 8 && allianceRef.current.userIds.includes(ship.owner)) {
                 const angle = Math.atan2(pt.y - shipY, pt.x - shipX);
                 props.launch(
                   vehicleType.current,
@@ -255,7 +260,7 @@ function Galaxy(props) {
                   Math.sin(ship.angle.value);
 
               const shipDistance = getDistance(shipX, shipY, pt.x, pt.y);
-              if (shipDistance < 8 && ship.owner === userRef.current.id) {
+              if (shipDistance < 8 && allianceRef.current.userIds.includes(ship.owner)) {
                 const angle = Math.atan2(pt.y - shipY, pt.x - shipX);
                 props.navigate("commander", { shipId:ship.id }, angle);
               }
@@ -265,7 +270,7 @@ function Galaxy(props) {
           Object.values(sunsRef.current).forEach(sun => {
             const sunDistance = getDistance(sun.x, sun.y, pt.x, pt.y);
             if (sunDistance < sun.size) {
-              if (sun.owner === userRef.current.id) {
+              if (allianceRef.current.userIds.includes(sun.owner)) {
                 const angle = Math.atan2(pt.y - sun.y, pt.x - sun.x);
                 props.navigate("sun", { sunId:sun.id }, angle);
               }
@@ -286,7 +291,7 @@ function Galaxy(props) {
                 );
 
                 if (planetDistance < planet.size) {
-                  if (planet.owner === userRef.current.id) {
+                  if (allianceRef.current.userIds.includes(planet.owner)) {
                     lastSun.current = sun.id;
                     if (
                       vehicleType.current === "shield" ||
@@ -322,7 +327,7 @@ function Galaxy(props) {
 
                     if (
                       moonDistance < moon.size &&
-                      moon.owner === userRef.current.id
+                      allianceRef.current.userIds.includes(moon.owner)
                     ) {
                       if (
                         vehicleType.current === "shield" ||
@@ -409,18 +414,23 @@ function Galaxy(props) {
       ctx.fillStyle = "black";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // User view window
-      ctx.save();
-      ctx.translate(translateX.current, translateY.current);
-      ctx.scale(zoomscale.current, zoomscale.current);
-
       // Background stars
+      ctx.save();
+      ctx.translate(translateX.current*.8, translateY.current*.8);
+      ctx.scale(zoomscale.current*.8, zoomscale.current*.8);
       stars.forEach((star) => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, 1, 0, 2 * Math.PI);
         ctx.fillStyle = star.color;
         ctx.fill();
       });
+      ctx.restore();
+
+      // User view window
+      ctx.save();
+      ctx.translate(translateX.current, translateY.current);
+      ctx.scale(zoomscale.current, zoomscale.current);
+
 
       // Grid
       for(let x=-100000; x<100000; x+=10000) {
@@ -535,8 +545,8 @@ function Galaxy(props) {
           ctx.translate(shipX, shipY);
           ctx.rotate(shipAngle);
 
-          ctx.fillStyle = ship.owner === userRef.current.id ? "green" : "red";
-          ctx.strokeStyle = ship.owner === userRef.current.id ? "green" : "red";
+          ctx.fillStyle = allianceRef.current.userIds.includes(ship.owner) ? (ship.owner === userRef.current.id ? "green" : "blue") : "red";
+          ctx.strokeStyle = allianceRef.current.userIds.includes(ship.owner) ? (ship.owner === userRef.current.id ? "green" : "blue") : "red";
           if (ship.type === "fighter") {
             ctx.beginPath();
             ctx.moveTo(-4, -2);
@@ -663,8 +673,9 @@ function Galaxy(props) {
           ctx.beginPath();
           ctx.arc(planetX, planetY, planet.size, 0, 2 * Math.PI);
           ctx.fillStyle = planet.owner
-            ? planet.owner === userRef.current.id
-              ? rgb(0, 55 + Math.min(200, planetStrength), 0)
+            ? allianceRef.current.userIds.includes(planet.owner)
+              ? (planet.owner === userRef.current.id ? rgb(0, 55 + Math.min(200, planetStrength), 0) 
+              : rgb(0, 0, 55 + Math.min(200, planetStrength)))
               : rgb(55 + Math.min(200, planetStrength), 0, 0)
             : "gray";
           ctx.fill();
@@ -736,8 +747,9 @@ function Galaxy(props) {
               ctx.beginPath();
               ctx.arc(moonX, moonY, moon.size, 0, 2 * Math.PI);
               ctx.fillStyle = moon.owner
-                ? moon.owner === userRef.current.id
-                  ? rgb(0, 55 + Math.min(200, moonStrength), 0)
+                ? allianceRef.current.userIds.includes(moon.owner)
+                  ? (moon.owner === userRef.current.id ? rgb(0, 55 + Math.min(200, moonStrength), 0) 
+                  : rgb(0, 0, 55 + Math.min(200, moonStrength)))
                   : rgb(55 + Math.min(200, moonStrength), 0, 0)
                 : "gray";
               ctx.fill();
@@ -765,11 +777,12 @@ function Galaxy(props) {
             sun.y,
             750
           );
+          const transparency = 1/(10 + (zoomscale.current*10))
           ownerHase.addColorStop(
             0,
-            sun.owner === userRef.current.id
-              ? "rgb(0,255,0,.10)"
-              : "rgb(255,0,0,.10)"
+            allianceRef.current.userIds.includes(sun.owner)
+              ? (sun.owner===userRef.current.id ? "rgb(0,255,0,"+transparency+")" : "rgb(0,0,255,"+transparency+")")
+              : "rgb(255,0,0,"+transparency+")"
           );
           ownerHase.addColorStop(1, "rgb(0,0,0,0)");
           ctx.fillStyle = ownerHase;
@@ -797,7 +810,6 @@ function Galaxy(props) {
       });
 
       Object.values(explosionsRef.current).forEach((explosion) => {
-        console.log("draw", explosion);
         var explosionHase = ctx.createRadialGradient(
           explosion.x,
           explosion.y,
@@ -829,7 +841,9 @@ function Galaxy(props) {
       <Toolbar
         changeVehicle={(type) => (vehicleType.current = type)}
         centerViewport={initViewport}
-      ></Toolbar>
+        alliance={props.alliance}
+        allianceChange={alliance => props.setAlliance(alliance)}
+      />
       <canvas id="galaxy_canvas"></canvas>
     </div>
   );

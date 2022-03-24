@@ -24,7 +24,7 @@ let suns = {};
 let ships = {};
 let connections = {};
 let users = {};
-let aliances = {};
+let alliances = {};
 
 const shipTypes = {
   fighter: {
@@ -35,6 +35,7 @@ const shipTypes = {
     people: 5,
     speed: 8,
     width: 5,
+    lifespan: (60 * 10) // 10 minutes
   },
   missile: {
     strength: 1,
@@ -44,6 +45,7 @@ const shipTypes = {
     people: 0,
     speed: 12,
     width: 2,
+    lifespan: (60 * 2) // 2 minutes
   },
   missile4: {
     strength: 1,
@@ -53,6 +55,7 @@ const shipTypes = {
     people: 0,
     speed: 13,
     width: 2,
+    lifespan: (60 * 2) // 2 minutes
   },
   missile2: {
     splashDamage: true,
@@ -65,6 +68,7 @@ const shipTypes = {
     people: 0,
     speed: 12,
     width: 2,
+    lifespan: (60 * 2) // 2 minutes
   },
   missile3: {
     splashDamage: true,
@@ -77,6 +81,7 @@ const shipTypes = {
     people: 0,
     speed: 12,
     width: 2,
+    lifespan: (60 * 2) // 2 minutes
   },
   carrier: {
     strength: 75,
@@ -86,6 +91,7 @@ const shipTypes = {
     people: 0,
     speed: 6,
     width: 8,
+    lifespan: (60 * 20) // 20 minutes
   },
   carrier2: {
     strength: 100,
@@ -95,6 +101,7 @@ const shipTypes = {
     people: 0,
     speed: 6,
     width: 8,
+    lifespan: (60 * 20) // 20 minutes
   },
   carrier3: {
     strength: 125,
@@ -104,6 +111,7 @@ const shipTypes = {
     people: 0,
     speed: 6,
     width: 8,
+    lifespan: (60 * 20) // 20 minutes
   },
   commander: {
     strength: 15,
@@ -113,6 +121,7 @@ const shipTypes = {
     people: 2,
     speed: 6,
     width: 8,
+    lifespan: (60 * 20) // 20 minutes
   },
 };
 
@@ -198,7 +207,7 @@ wss.on("connection", (socket) => {
         connectionId = getUniqueID();
         connections[connectionId] = {
           socket: socket,
-          user: userId,
+          userId: userId,
         };
 
         // if you have no planets, gift one
@@ -219,15 +228,19 @@ wss.on("connection", (socket) => {
       } else {
         console.log("new user generated");
         connectionId = getUniqueID();
+        userId = getUniqueID();
         connections[connectionId] = {
           socket: socket,
-          user: data.user,
+          userId: userId,
         };
 
-        userId = getUniqueID();
         users[userId] = {
+          alliance: getUniqueID(),
           secret: getUniqueID() + "-" + getUniqueID(),
         };
+
+        // Create new alliance, with just one member
+        alliances[users[userId].alliance] = [userId]
 
         giftPlanet()
       }
@@ -235,17 +248,66 @@ wss.on("connection", (socket) => {
         JSON.stringify({
           time,
           type: "auth",
+          alliance: users[userId].alliance,
           user: userId,
           secret: users[userId].secret,
         })
       );
+      socket.send(
+        JSON.stringify({ time, type: "allianceUpdate", allianceId: users[userId].alliance, userIds:alliances[users[userId].alliance] })
+    );
+
       socket.send(JSON.stringify({ time, type: "update", suns, ships }));
+    } else if (data.type === "alliance") {
+        let newAlliance = data.alliance
+        if(!newAlliance) {
+            console.log('removing any alliance', newAlliance)
+            newAlliance = getUniqueID()
+            alliances[newAlliance] = []
+
+            // TODO we probably want to regenerate the old code to avoid reuse
+        }
+
+        if(alliances[newAlliance])
+        {
+            const oldAlliance = users[userId].alliance
+            if(newAlliance !== oldAlliance) {
+                console.log('alliance changing', newAlliance)
+
+                // Add the new aliance
+                users[userId].alliance = newAlliance
+                alliances[newAlliance].push(userId)
+
+                // Clean up the old alliance
+                alliances[oldAlliance].splice(alliances[oldAlliance].indexOf(userId), 1)
+
+                // Broadcast aliance changes
+                Object.values(connections).forEach((connection) => {
+                    if(users[connection.userId].alliance === oldAlliance) {
+                        connection.socket.send(
+                            JSON.stringify({ time, type: "allianceUpdate", allianceId: oldAlliance, userIds:alliances[oldAlliance] })
+                        );
+                    }
+                    if(users[connection.userId].alliance === newAlliance) {
+                        connection.socket.send(
+                            JSON.stringify({ time, type: "allianceUpdate", allianceId: newAlliance, userIds:alliances[newAlliance] })
+                        );
+                    }
+                  });
+
+                  if(alliances[oldAlliance].length === 0) {
+                    delete alliances[oldAlliance]
+                }
+
+            }           
+        }
+
     } else if (data.type === "navigate") {
       if (data.sourceType === "sun") {
         const sun = suns[data.source.sunId];
-        if (sun.owner === userId) {
+        if (alliances[users[userId].alliance].includes(sun.owner)) {
           Object.values(ships).forEach(ship => {
-            if (ship.owner === userId) {
+            if (alliances[users[userId].alliance].includes(ship.owner)) {
               let shipX =
                 ship.x +
                 ship.speed *
@@ -281,7 +343,7 @@ wss.on("connection", (socket) => {
         }
       } else if (data.sourceType === "commander") {
         const commander = ships[data.source.shipId];
-        if (commander.owner === userId) {
+        if (alliances[users[userId].alliance].includes(commander.owner)) {
           let commanderX =
             commander.x +
             commander.speed *
@@ -293,7 +355,7 @@ wss.on("connection", (socket) => {
               (time - commander.angle.time) *
               Math.sin(commander.angle.value);
           Object.values(ships).forEach(ship => {
-            if (ship.owner === userId) {
+            if (alliances[users[userId].alliance].includes(ship.owner)) {
               let shipX =
                 ship.x +
                 ship.speed *
@@ -335,7 +397,7 @@ wss.on("connection", (socket) => {
       }
     } else if (data.type === "shield") {
       const planet = planets[data.planetId];
-      if (planet.owner === userId) {
+      if (alliances[users[userId].alliance].includes(planet.owner)) {
         const sun = suns[data.sunId];
         const planetStrength = Math.min(
           planet.strength.max,
@@ -405,7 +467,7 @@ wss.on("connection", (socket) => {
     } else if (data.type === "launch") {
       if (data.sourceType === "carrier") {
         const carrier = ships[data.source.shipId];
-        if (carrier.owner === userId) {
+        if (alliances[users[userId].alliance].includes(carrier.owner)) {
           for (let i = 0; i < data.count; i++) {
             if (carrier.strength > shipTypes[data.shipType].cost) {
               carrier.strength =
@@ -424,7 +486,7 @@ wss.on("connection", (socket) => {
               const ship = {
                 id: getUniqueID(),
                 lastTouch: time,
-                owner: userId,
+                owner: carrier.owner,
                 type: data.shipType,
                 x: carrierX + (8 + Math.random() * 2) * Math.cos(data.angle),
                 y: carrierY + (8 + Math.random() * 2) * Math.sin(data.angle),
@@ -458,7 +520,7 @@ wss.on("connection", (socket) => {
         const planet = planets[data.source.planetId];
         const moon = planet.moons[data.source.moonId];
 
-        if (moon.owner === userId) {
+        if (alliances[users[userId].alliance].includes(moon.owner)) {
           const sun = suns[planet.sunId];
           const planetAngle =
             planet.angle.value +
@@ -486,7 +548,7 @@ wss.on("connection", (socket) => {
               const ship = {
                 id: getUniqueID(),
                 lastTouch: time,
-                owner: userId,
+                owner: moon.owner,
                 type: data.shipType,
                 x: moonX + (3 + Math.random() * 2) * Math.cos(data.angle),
                 y: moonY + (3 + Math.random() * 2) * Math.sin(data.angle),
@@ -524,8 +586,7 @@ wss.on("connection", (socket) => {
 
       if (data.sourceType === "planet") {
         const planet = planets[data.source.planetId];
-        console.log(planet.owner, userId);
-        if (planet.owner === userId) {
+        if (alliances[users[userId].alliance].includes(planet.owner)) {
           const sun = suns[data.source.sunId];
           const planetAngle =
             planet.angle.value +
@@ -547,7 +608,7 @@ wss.on("connection", (socket) => {
               const ship = {
                 id: getUniqueID(),
                 lastTouch: time,
-                owner: userId,
+                owner: planet.owner,
                 planetId: planet.id,
                 source: "planet",
                 type: data.shipType,
@@ -603,9 +664,8 @@ var getDistance = (x1, y1, x2, y2) => {
 var collisionDetection = () => {
   let time = Date.now() / 1000;
 
-  let timeout = time - (60 * 10); // 10 minutes
   Object.values(ships).forEach((ship) => {
-    if (ship.lastTouch < timeout) {
+    if (ship.lastTouch < time - shipTypes[ship.type].lifespan) {
       delete ships[ship.id];
       Object.values(connections).forEach((connection) => {
         connection.socket.send(
@@ -645,7 +705,7 @@ var collisionDetection = () => {
           // Match speed of commander?
           if (
             ship.type === "commander" &&
-            ship.owner === ship2.owner &&
+            users[ship.owner].alliance === users[ship2.owner].alliance &&
             shipDistance < 100
           ) {
             if (ship.speed != ship2.speed) {
@@ -664,7 +724,7 @@ var collisionDetection = () => {
           // Join carrier?
           if (
             ship.type === "carrier" &&
-            ship.owner === ship2.owner &&
+            users[ship.owner].alliance === users[ship2.owner].alliance &&
             shipDistance < ship.width
           ) {
             if (ship.strength + ship2.strength <= 75) {
@@ -685,10 +745,10 @@ var collisionDetection = () => {
           if (
             shipDistance < 50 &&
             ship.type === "missile4" &&
-            ((!ship.intercept && ship.owner != ship2.owner) ||
+            ((!ship.intercept && users[ship.owner].alliance != users[ship2.owner].alliance ) ||
               (ship.intercept &&
                 !ships[ship.intercept] &&
-                ship.owner != ship2.owner) ||
+                users[ship.owner].alliance != users[ship2.owner].alliance ) ||
               ship.intercept === ship2.id)
           ) {
             ship.intercept = ship2.id;
@@ -713,7 +773,7 @@ var collisionDetection = () => {
           // Collide?
           if (
             shipDistance < ship.width + ship2.width &&
-            ship.owner !== ship2.owner
+            users[ship.owner].alliance != users[ship2.owner].alliance 
           ) {
             ship.strength -= ship2.shipDamage;
             ship2.strength -= ship.shipDamage;
@@ -849,6 +909,7 @@ var collisionDetection = () => {
           delete ships[ship.id];
 
           if (ship.type === "missile3") {
+            // Slow production of dark solar system
             sun.dark = true;
             Object.values(sun.planets).forEach((planet) => {
               planet.strength.speed = 1 / 2;
@@ -901,40 +962,43 @@ var collisionDetection = () => {
                     (time - planet.strength.time) * planet.strength.speed
                 )
               : 0;
-            if (!planet.owner || planet.owner === ship.owner) {
+            if (!planet.owner || users[planet.owner].alliance === users[ship.owner].alliance) {
+              // Claim or add to the planet's health
               if (ship.people > 0) {
-                planet.strength.value = ship.people + planetStrength;
-                planet.strength.time = time;
-                planet.owner = ship.owner;
-                if (planet.owner !== sun.owner) {
+                if (!planet.owner) {
                   sun.owner = ship.owner;
+                  planet.owner = ship.owner;
                   Object.values(connections).forEach((connection) => {
                     connection.socket.send(
                       JSON.stringify({ time, type: "sunUpdate", sun })
                     );
                   });
                 }
+                planet.strength.value = ship.people + planetStrength;
+                planet.strength.time = time;
               }
             } else {
+              // Conquer planet
               if (planetStrength < ship.planetDamage) {
                 if (ship.people > 0) {
                   planet.strength.value = ship.people;
                   planet.strength.time = time;
                   planet.owner = ship.owner;
+                  if (users[planet.owner].alliance != users[sun.owner].alliance) {
+                    sun.owner = ship.owner;
+                    Object.values(connections).forEach((connection) => {
+                      connection.socket.send(
+                        JSON.stringify({ time, type: "sunUpdate", sun })
+                      );
+                    });
+                  }
                 } else {
                   planet.strength.value = 0;
                   planet.strength.time = time;
                   planet.owner = null;
                 }
-                if (planet.owner !== sun.owner) {
-                  sun.owner = ship.owner;
-                  Object.values(connections).forEach((connection) => {
-                    connection.socket.send(
-                      JSON.stringify({ time, type: "sunUpdate", sun })
-                    );
-                  });
-                }
               } else {
+                // damage planet
                 planet.strength.value = planetStrength - ship.planetDamage;
                 planet.strength.time = time;
               }
@@ -946,7 +1010,7 @@ var collisionDetection = () => {
                 JSON.stringify({
                   time,
                   type: "shipDestroyed",
-                  explosion: planet.owner && planet.owner != ship.owner,
+                  explosion: planet.owner && users[planet.owner].alliance != users[ship.owner].alliance,
                   cause: "planet",
                   sunId: sun.id,
                   planetId: planet.id,
@@ -978,19 +1042,21 @@ var collisionDetection = () => {
                         (time - moon.strength.time) * moon.strength.speed
                     )
                   : 0;
-                if (!moon.owner || moon.owner === ship.owner) {
+                if (!moon.owner || users[moon.owner].alliance === users[ship.owner].alliance) {
                   if (ship.people > 0) {
+                      if(!moon.owner) {
+                        moon.owner = ship.owner;
+                        if (moon.owner !== sun.owner) {
+                          sun.owner = ship.owner;
+                          Object.values(connections).forEach((connection) => {
+                            connection.socket.send(
+                              JSON.stringify({ time, type: "sunUpdate", sun })
+                            );
+                          });
+                        }    
+                      }
                     moon.strength.value = 5 + moonStrength;
                     moon.strength.time = time;
-                    moon.owner = ship.owner;
-                    if (moon.owner !== sun.owner) {
-                      sun.owner = ship.owner;
-                      Object.values(connections).forEach((connection) => {
-                        connection.socket.send(
-                          JSON.stringify({ time, type: "sunUpdate", sun })
-                        );
-                      });
-                    }
                   }
                 } else {
                   if (moonStrength < ship.people) {
@@ -998,18 +1064,18 @@ var collisionDetection = () => {
                       moon.strength.value = ship.people;
                       moon.strength.time = time;
                       moon.owner = ship.owner;
+                      if (users[moon.owner].alliance != users[sun.owner].alliance) {
+                        sun.owner = ship.owner;
+                        Object.values(connections).forEach((connection) => {
+                          connection.socket.send(
+                            JSON.stringify({ time, type: "sunUpdate", sun })
+                          );
+                        });
+                      }
                     } else {
                       moon.strength.value = 0;
                       moon.strength.time = time;
                       moon.owner = null;
-                    }
-                    if (moon.owner !== sun.owner) {
-                      sun.owner = ship.owner;
-                      Object.values(connections).forEach((connection) => {
-                        connection.socket.send(
-                          JSON.stringify({ time, type: "sunUpdate", sun })
-                        );
-                      });
                     }
                   } else {
                     moon.strength.value = -5 + moonStrength;
@@ -1023,7 +1089,7 @@ var collisionDetection = () => {
                     JSON.stringify({
                       time,
                       type: "shipDestroyed",
-                      explosion: moon.owner && moon.owner != ship.owner,
+                      explosion: moon.owner && users[moon.owner].alliance != users[ship.owner].alliance,
                       cause: "moon",
                       sunId: sun.id,
                       planetId: planet.id,
