@@ -1,12 +1,13 @@
 import "./App.css";
 import Galaxy from "./Galaxy.js";
 import React, { useEffect, useState, useRef } from "react";
+import Spinner from "react-bootstrap/Spinner"
 
 function App() {
   const [time, setTime] = useState(0);
-  const [suns, setSuns] = useState([]);
-  const [ships, setShips] = useState([]);
-  const [user, setUser] = useState([]);
+  const [suns, setSuns] = useState({});
+  const [ships, setShips] = useState({});
+  const [user, setUser] = useState({});
   const [alliance, setAlliance] = useState({id:'', userIds:[]});
   const [explosions, setExplosions] = useState([]);
 
@@ -30,8 +31,8 @@ function App() {
     const ws = new WebSocket(
       (window.location.protocol === "https:" ? "wss" : "ws") +
         "://" +
-        //"port-8080-galaxy-lee508578.preview.codeanywhere.com" +
-        window.location.hostname +
+        "port-8080-starcaster-io-lee508578.preview.codeanywhere.com" +
+        //window.location.hostname +
         "/api"
     );
 
@@ -41,15 +42,15 @@ function App() {
       console.log("Connected to socket");
 
       // Send authentication if we have it, otherwise request
-      if (localStorage.getItem("user")) {
+      if (localStorage.getItem("userId")) {
         send({
-          type: "auth",
-          user: localStorage.getItem("user"),
+          type: "authRequest",
+          userId: localStorage.getItem("userId"),
           secret: localStorage.getItem("secret"),
         });
-        setUser({ id: localStorage.getItem("user") });
+        setUser({ id: localStorage.getItem("userId") });
       } else {
-        send({ type: "auth" });
+        send({ type: "authRequest" });
       }
 
       // TODO cancel this later
@@ -67,7 +68,7 @@ function App() {
         }
 
         if (msg.type === "auth") {
-          localStorage.setItem("user", msg.user);
+          localStorage.setItem("userId", msg.user);
           localStorage.setItem("secret", msg.secret);
           setUser({ id: msg.user });
         }
@@ -150,6 +151,22 @@ function App() {
 
   return (
     <>
+        {Object.values(suns).length === 0 && <div style={{
+            position: "absolute",
+            top: "50%",
+            right: "50%",
+            marginTop: "-4rem",
+            marginLeft: "-4rem",
+            width:"8rem",
+            height: "8rem",
+            textShadow: "0px 0px 10px rgb(13 202 240)"
+        }}>
+            <Spinner style={{
+                width: "8rem",
+                height: "8rem"
+            }} animation="border" variant="info" />
+        </div> }
+
         <div style={{
             position: "absolute",
             top: "15px",
@@ -190,8 +207,8 @@ function App() {
         planitaryShield={(sunId, planetId, shieldType) => {
             send({ type: "shield", sunId, planetId, shieldType });
         }}
-        setAlliance={(alliance) => {
-            send({ type: "alliance", alliance });
+        setAlliance={(allianceId) => {
+            send({ type: "changeAlliance", allianceId });
         }}
         
         />

@@ -83,7 +83,7 @@ function Galaxy(props) {
   }, [props.alliance]);
   
   useEffect(() => {
-    const isInitialLoad = sunsRef.current.length === 0;
+    const isInitialLoad = Object.values(sunsRef.current).length === 0;
     sunsRef.current = props.suns;
     if (isInitialLoad) {
       initViewport();
@@ -280,8 +280,8 @@ function Galaxy(props) {
                   planet.angle.value +
                   ((timeRef.current * Math.PI) / planet.distance) *
                     planet.angle.speed;
-                let planetX = sun.x + planet.distance * Math.sin(planetAngle);
-                let planetY = sun.y + planet.distance * Math.cos(planetAngle);
+                let planetX = sun.x + planet.distance * Math.cos(planetAngle);
+                let planetY = sun.y + planet.distance * Math.sin(planetAngle);
 
                 const planetDistance = getDistance(
                   planetX,
@@ -320,8 +320,8 @@ function Galaxy(props) {
                       moon.angle.value +
                       ((timeRef.current * Math.PI) / moon.distance) *
                         moon.angle.speed;
-                    let moonX = planetX + moon.distance * Math.sin(moonAngle);
-                    let moonY = planetY + moon.distance * Math.cos(moonAngle);
+                    let moonX = planetX + moon.distance * Math.cos(moonAngle);
+                    let moonY = planetY + moon.distance * Math.sin(moonAngle);
 
                     const moonDistance = getDistance(moonX, moonY, pt.x, pt.y);
 
@@ -494,8 +494,8 @@ function Galaxy(props) {
               planet.angle.value +
               ((timeRef.current * Math.PI) / planet.distance) *
                 planet.angle.speed;
-            let planetX = sun.x + planet.distance * Math.sin(planetAngle);
-            let planetY = sun.y + planet.distance * Math.cos(planetAngle);
+            let planetX = sun.x + planet.distance * Math.cos(planetAngle);
+            let planetY = sun.y + planet.distance * Math.sin(planetAngle);
 
             // Planet orbit
             ctx.beginPath();
@@ -648,8 +648,8 @@ function Galaxy(props) {
                     planet.strength.speed
               )
             : 0;
-          let planetX = sun.x + planet.distance * Math.sin(planetAngle);
-          let planetY = sun.y + planet.distance * Math.cos(planetAngle);
+          let planetX = sun.x + planet.distance * Math.cos(planetAngle);
+          let planetY = sun.y + planet.distance * Math.sin(planetAngle);
 
           // Planet shadow
           if (zoomscale.current > 1) {
@@ -722,8 +722,8 @@ function Galaxy(props) {
                         moon.strength.speed
                   )
                 : 0;
-              const moonX = planetX + moon.distance * Math.sin(moonAngle);
-              const moonY = planetY + moon.distance * Math.cos(moonAngle);
+              const moonX = planetX + moon.distance * Math.cos(moonAngle);
+              const moonY = planetY + moon.distance * Math.sin(moonAngle);
 
               // Moon shadow
               if (zoomscale.current > 1) {
