@@ -19,10 +19,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && rm -fr ../server/buld && mv build ../server/",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "lint": "npx prettier --write src/**"
+    "build": "DISABLE_ESLINT_PLUGIN=true react-scripts build && rm -fr ../server/buld && mv build ../server/",
+    "lint": "npx eslint ./src/**/* --fix"
   },
   "eslintConfig": {
     "extends": [
@@ -43,6 +41,12 @@
     ]
   },
   "devDependencies": {
+    "eslint": "^8.11.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-react": "^7.29.4",
+    "eslint-plugin-react-hooks": "^4.3.0",
     "prettier": "2.6.0"
   }
 }
