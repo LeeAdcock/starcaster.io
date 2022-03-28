@@ -1,8 +1,69 @@
 const EventEmitter = require('events');
 const getUniqueID = require("../util/uniqueIdGenerator.js");
 
-const Alliance = require('../types/alliance')
-const User = require('../types/user')
+class User {
+    constructor() {
+        this.id = getUniqueID()
+        this.secret = getUniqueID() + getUniqueID() + "-" + getUniqueID()
+    }
+
+    toJSON() {
+        return {
+          id: this.id
+        }
+      }
+
+    getAlliance() {
+        return this.alliance
+    }
+
+    getId() {
+        return this.id
+    }
+
+    getSecret() {
+        return this.secret
+    }
+
+    setAlliance(newAlliance) {
+        const oldAlliance = this.alliance
+
+        if(oldAlliance.getId()!==newAlliance.getId()) {
+            this.alliance = newAlliance
+            newAlliance.addUser(this)
+            oldAlliance.removeUser(this)
+        }    
+    }
+}
+
+class Alliance {
+    constructor() {
+        this.id = getUniqueID()
+        this.users = []
+    }
+
+    getId() {
+        return this.id
+    }
+
+    getUsers() {
+        return this.users
+    }
+
+    addUser(user) {
+        this.users.push(user)
+        userService.emit("allianceUpdate", this)
+    }
+
+    removeUser(user) {
+        this.users.splice(this.users.findIndex(allianceUser => allianceUser.getId() === user.getId()), 1)
+        userService.emit("allianceUpdate", this)
+    }
+
+    hasUser(user){
+        return this.users.find(allianceUser => allianceUser.getId() === user.getId())
+    }
+}
 
 class UserService extends EventEmitter {
 
@@ -29,8 +90,6 @@ class UserService extends EventEmitter {
     newUser() {
         const user = new User()
         user.id = getUniqueID()
-        user.alliance = this.newAlliance()
-        user.alliance.addUser(user)
         this.users[user.id] = user
         return user
     }
@@ -40,4 +99,5 @@ class UserService extends EventEmitter {
     }
 }
 
-module.exports = new UserService()
+const userService = new UserService()
+module.exports = {userService, User, Alliance}

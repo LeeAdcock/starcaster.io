@@ -3,12 +3,15 @@ const express = require("express");
 const shipTypes  = require("./constants/shipTypes.js")
 const WebsocketServer = require('./websocketServer')
 
-const galaxyService = require('./services/galaxyService')
-const userService = require('./services/userService')
+const {galaxyService} = require('./services/galaxyService')
+const {userService} = require('./services/userService')
 
 
 {
     const aiUser = userService.newUser()
+    aiUser.alliance = userService.newAlliance()
+    aiUser.alliance.addUser(aiUser)
+  
     const suns = Object.values(galaxyService.getSuns())
     const randomSun = suns[Math.floor(Math.random() * suns.length)];
     const randomPlanet = randomSun.getPlanets()[Math.floor(Math.random() * randomSun.getPlanets().length)];
@@ -29,9 +32,7 @@ const userService = require('./services/userService')
 
                                     for(let i = 0; i < 3; i=i+1) {
                                         if(ship.getStrength() > 5) {
-                                            const launchedShip = ship.launch("fighter", interceptAngle)
-                                            galaxyService.launchedShip(launchedShip);
-                                            galaxyService.emit("shipUpdate", ship);
+                                            ship.launch("fighter", interceptAngle)
                                         }
                                     }
                                 }
@@ -53,9 +54,7 @@ const userService = require('./services/userService')
                             const interceptAngle = Math.atan2(moon.getY() - planet.getY(), moon.getX() - planet.getX())
                             for(let i = 0; i < 3; i=i+1) {
                                 if(planet.getStrength() > 50) {
-                                    const launchedShip = planet.launch("fighter", interceptAngle + (i * Math.PI/50))
-                                    galaxyService.launchedShip(launchedShip);
-                                    galaxyService.emit("planetUpdate", planet);
+                                    planet.launch("fighter", interceptAngle + (i * Math.PI/50))
                                 }
                             }
                         }
@@ -63,9 +62,7 @@ const userService = require('./services/userService')
                         // launch from our moon to our planet
                         if(moon.getOwner() && planet.getOwner().getId() === moon.getOwner().getId() && moon.getStrength()>35 && planet.getStrength()<100) {
                             const interceptAngle = Math.atan2(planet.getY() - moon.getY(), planet.getX() - moon.getX())
-                            const launchedShip = moon.launch("fighter", interceptAngle)
-                            galaxyService.launchedShip(launchedShip);
-                            galaxyService.emit("moonUpdate", moon);
+                            moon.launch("fighter", interceptAngle)
                        }
                     })
                     
@@ -78,9 +75,7 @@ const userService = require('./services/userService')
                                 //if((Math.PI - Math.abs(Math.abs(interceptAngle - planet.getAngle()) - Math.PI)) > Math.PI/4) {
                                     for(let i = 0; i < 3; i=i+1) {
                                         if(planet.getStrength() > 50) {
-                                            const launchedShip = planet.launch("fighter", interceptAngle + (i * Math.PI/50))
-                                            galaxyService.launchedShip(launchedShip);
-                                            galaxyService.emit("planetUpdate", planet);
+                                            planet.launch("fighter", interceptAngle + (i * Math.PI/50))
                                         }
                                     }
                                 //}
@@ -99,35 +94,25 @@ const userService = require('./services/userService')
                                             // launch fighter
                                             for(let i = 0; i < 3; i=i+1) {
                                                 if(planet.getStrength() > 50) {
-                                                    const launchedShip = planet.launch("fighter", interceptAngle)
-                                                    galaxyService.launchedShip(launchedShip);
-                                                    galaxyService.emit("planetUpdate", planet);
+                                                    planet.launch("fighter", interceptAngle)
                                                 }
                                             }
                                         } else if(Math.random()>.25) {
                                             // launch carrier
                                             if(planet.getStrength() > 75) {
-                                                const launchedShip = planet.launch("carrier", interceptAngle)
-                                                galaxyService.launchedShip(launchedShip);
-                                                galaxyService.emit("planetUpdate", planet);
+                                                planet.launch("carrier", interceptAngle)
                                             }
                                         } else if(Math.random()>.25) {
                                             // launch commander
                                             if(planet.getStrength() > 50) {
-                                                const launchedShip = planet.launch("commander", interceptAngle)
-                                                galaxyService.launchedShip(launchedShip);
-                                                galaxyService.emit("planetUpdate", planet);
+                                                planet.launch("commander", interceptAngle)
                                             }
                                         }
                                     }
                                 })
                             }
                         })   
-                    }
-
-                    if(planet.upgradeShield())
-                        galaxyService.emit("planetUpdate", planet)
-              
+                    }              
                 }
             })
         })
@@ -239,7 +224,7 @@ galaxyService.on("shipDestroyed", (ship) => {
 })
 
 userService.on("allianceUpdate", (alliance)  => {
-    const userConnections = Object.values(websockets.getConnections()).filter(connection => alliance.hasUser(connection.getUser()))
+    const userConnections = Object.values(websockets.getConnections()).filter(connection => connection.getUser() && alliance.hasUser(connection.getUser()))
     if(userConnections) {
         userConnections.forEach(connection => {
                 connection.socket.send(
@@ -276,14 +261,15 @@ websockets.on("authRequest", ({connection, data}) => {
       );  
   }
 
-    userService.emit("allianceUpdate", connection.user.getAlliance() )
+  connection.user.alliance = userService.newAlliance()
+  connection.user.alliance.addUser(connection.user)
+
 
     if (!galaxyService.hasPlanetOrMoon(connection.user)) {
         const suns = Object.values(galaxyService.getSuns())
         const randomSun = suns[Math.floor(Math.random() * suns.length)];
         const randomPlanet = randomSun.getPlanets()[Math.floor(Math.random() * randomSun.getPlanets().length)];
         randomPlanet.setOwner(connection.user)
-        //galaxyService.emit('planetUpdate', randomPlanet);
     }
 
     connection.socket.send(JSON.stringify({
@@ -310,8 +296,6 @@ websockets.on("changeAlliance", ({connection, data}) => {
     if(newAlliance)
     {
         user.setAlliance(newAlliance)
-        userService.emit("allianceUpdate", oldAlliance)
-        userService.emit("allianceUpdate", newAlliance)
     }
 })
 
@@ -330,7 +314,6 @@ websockets.on("navigate", ({connection, data}) => {
               let shipY = ship.getY(time);
               if (getDistance(shipX, shipY, sun.x, sun.y) < 200) {
                 ship.turnTo(shipX, shipY, data.angle, time)
-                galaxyService.emit("shipUpdate", ship);
               }
             }
           });
@@ -348,7 +331,6 @@ websockets.on("navigate", ({connection, data}) => {
               let shipY = ship.getY(time);
               if (getDistance(shipX, shipY, commanderX, commanderY) < 150) {
                 ship.turnTo(shipX, shipY, data.angle, time)
-                galaxyService.emit("shipUpdate", ship);
               }
             }
           });
@@ -368,7 +350,6 @@ websockets.on("shield", ({connection, data}) => {
   if(alliance.hasUser(planet.getOwner()))
   {
       planet.upgradeShield(time)
-      galaxyService.emit("planetUpdate", planet)
     }
   
 })
@@ -384,10 +365,7 @@ websockets.on("launch", ({connection, data}) => {
             if (alliance.hasUser(carrier.getOwner())) {
                 for (let i = 0; i < data.count; i++) {
                     if (carrier.getStrength(time) > shipTypes[data.shipType].cost) {
-                        const launchedShip = carrier.launch(data.shipType, data.angle)                        
-                        galaxyService.launchedShip(launchedShip);
-                        galaxyService.emit("shipUpdate", carrier);
-                
+                        carrier.launch(data.shipType, data.angle)  
                     }
                 }
             }
@@ -400,9 +378,7 @@ websockets.on("launch", ({connection, data}) => {
             if (alliance.hasUser(moon.getOwner())) {
                 for (let i = 0; i < data.count; i++) {
                     if (moon.getStrength(time) > shipTypes[data.shipType].cost) {
-                        const launchedShip = moon.launch(data.shipType, data.angle)
-                        galaxyService.launchedShip(launchedShip);
-                        galaxyService.emit("moonUpdate", moon);
+                        moon.launch(data.shipType, data.angle)
                     }
                 }
             }
@@ -415,10 +391,7 @@ websockets.on("launch", ({connection, data}) => {
             if (alliance.hasUser(planet.getOwner())) {
                 for (let i = 0; i < data.count; i++) {
                     if (planet.getStrength(time) > shipTypes[data.shipType].cost) {
-
-                        const launchedShip = planet.launch(data.shipType, data.angle)
-                        galaxyService.launchedShip(launchedShip);
-                        galaxyService.emit("planetUpdate", planet);
+                        planet.launch(data.shipType, data.angle)
                     }
                 }
             }

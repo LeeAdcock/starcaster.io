@@ -1,13 +1,354 @@
 const EventEmitter = require('events');
 const shipTypes = require('./../constants/shipTypes')
-
-const Sun = require('./../types/sun')
+const sunNames = require('./../constants/sunNames')
+const getUniqueID = require("../util/uniqueIdGenerator.js");
 
 const getDistance = (x1, y1, x2, y2) => {
     let dy = x2 - x1;
     let dx = y2 - y1;
     return Math.sqrt(dx * dx + dy * dy);
   };
+
+  class Moon {
+
+    constructor(planet) {
+        this.id= getUniqueID()
+        this.planet = planet
+        this.size= 3
+        this.owner= null
+        this.strength={
+            value: 0,
+            time: 0 ,
+            max: 50 ,
+            speed: 1
+        }
+        this.distance= 15 + Math.round(Math.random() * 3) * 6
+        this.angle = {
+            value:Math.random() * 2 * Math.PI,
+            time: 0,
+            speed:(1 / 2)
+        }
+        planet.moons[this.id] = this;
+    }
+
+    toJSON() {
+        return {
+          id: this.id,
+          distance: this.distance,
+          angle: this.angle,
+          owner: this.owner ? this.owner.getId() : undefined,
+          strength: this.strength,
+          size: this.size,
+          moons: this.moons
+        }
+      }
+    
+      getId() {
+          return this.id
+      }
+    getOwner() {
+        return this.owner
+    }
+    getPlanet() {
+        return this.planet
+    }
+    getStrength() {
+        return Math.min(this.strength.max, this.strength.value + ((new Date()/1000) - this.strength.time) * this.strength.speed)
+    }
+    getShieldLevel() {
+        return  shieldLevelsByStrength[this.strength.max]
+    }
+    getX() { 
+        return this.getPlanet().getX() + this.distance * Math.cos(this.angle.value + (((new Date()/1000) * Math.PI) / this.distance) * this.angle.speed)
+    }
+    getY() { 
+        return this.getPlanet().getY() + this.distance * Math.sin(this.angle.value + (((new Date()/1000) * Math.PI) / this.distance) * this.angle.speed)
+    }
+    launch = (shipType, angle) => {
+        const time = new Date() / 1000
+        this.strength.value = this.getStrength() - shipTypes[shipType].cost;
+        this.strength.time = time
+        let moonX = this.getX()
+        let moonY = this.getY()
+        galaxyService.emit("moonUpdate", this)
+
+        // todo move to galaxyService
+        const launchedShip = new Ship(shipType)
+        launchedShip.id = getUniqueID()
+        launchedShip.lastTouch = time
+        launchedShip.owner = this.getOwner()
+        launchedShip.type = shipType
+        launchedShip.x = moonX + (8 + Math.random() * 2) * Math.cos(angle)
+        launchedShip.y = moonY + (8 + Math.random() * 2) * Math.sin(angle)
+        launchedShip.angle.value = angle + (Math.random() * Math.PI) / 20 - Math.PI / 40
+        launchedShip.angle.time = time
+        launchedShip.moonId = this.getId()
+        galaxyService.ships[launchedShip.getId()] = launchedShip
+        galaxyService.emit("shipUpdate", launchedShip);
+        return launchedShip
+    }       
+}
+
+class Planet {
+
+    constructor(sun) {
+        this.id= getUniqueID()
+        this.sun = sun
+        this.distance= 25 + Math.round(Math.random() * 10) * 15
+        this.angle = {
+            value: Math.random() * 2 * Math.PI,
+            time: 0,
+            speed: 1 / 20
+        }
+        this.size= 10
+        this.owner= null
+        this.strength = {
+            value: 0,
+            time:0,
+            max:100,
+            speed:2
+        }
+        this.moons= {}
+
+        sun.planets[this.id] = this;
+
+        for (let i = 0; i < Math.round(Math.random() * 3); i=i+1) {
+            new Moon(this);  
+        }
+    }
+
+    toJSON() {
+        return {
+          id: this.id,
+          distance: this.distance,
+          angle: this.angle,
+          owner: this.owner ? this.owner.getId() : undefined,
+          strength: this.strength,
+          size: this.size,
+          moons: this.moons
+        }
+      }
+
+    getId() {
+        return this.id
+    }
+    getOwner() {
+        return this.owner
+    }
+    setOwner(user) {
+        this.owner = user
+    }
+    getSun() {
+        return this.sun
+    }
+    getMoon(moonId) {
+        return this.moons[moonId]
+    }
+    getMoons(){
+        return this.moons
+    }
+    getAngle() {
+        return this.angle.value + (((new Date()/1000) * Math.PI) / this.distance) * this.angle.speed
+    }
+    getStrength() {
+        return Math.min(this.strength.max, this.strength.value + ((new Date()/1000) - this.strength.time) * this.strength.speed)
+    }
+    getShieldLevel() {
+        return shieldLevelsByStrength[this.strength.max]
+    }
+    getX() { 
+        return this.getSun().getX() + this.distance * Math.cos(this.getAngle())
+    }
+    getY() { 
+        return this.getSun().getY() + this.distance * Math.sin(this.getAngle())
+    }
+    getShieldLevel() {
+        shieldLevelsByStrength[this.strength.max]
+    }
+    upgradeShield() {
+        const currentStrength = this.getStrength()
+        if(currentStrength - (this.strength.max - 25) > 0 && this.strength.max < 175) {
+            this.strength.value = currentStrength - (this.strength.max - 25);
+            this.strength.max = this.strength.max + 25;
+            this.strength.time = (new Date()/1000);
+            galaxyService.emit("planetUpdate", planet)
+            return true
+        }
+        return false
+    }    
+    launch = (shipType, angle) => {
+        const time = (new Date()/1000)
+        let planetX = this.getX()
+        let planetY = this.getY()
+
+        this.strength.value = this.getStrength() - shipTypes[shipType].cost;
+        this.strength.time = new Date()/1000
+        galaxyService.emit("planetUpdate", this)
+
+        // todo move to galaxyService
+        const launchedShip = new Ship(shipType)
+        launchedShip.id = getUniqueID()
+        launchedShip.lastTouch = time
+        launchedShip.owner = this.getOwner()
+        launchedShip.type = shipType
+        launchedShip.x = planetX + (8 + Math.random() * 2) * Math.cos(angle)
+        launchedShip.y = planetY + (8 + Math.random() * 2) * Math.sin(angle)
+        launchedShip.angle.value = angle + (Math.random() * Math.PI) / 20 - Math.PI / 40
+        launchedShip.angle.time = time
+        launchedShip.planetId = this.getId()
+        galaxyService.ships[launchedShip.getId()] = launchedShip
+        galaxyService.emit("shipUpdate", launchedShip);
+        return launchedShip
+    }      
+}
+
+class Ship {
+
+    constructor(shipType) {
+        Object.assign(this, shipTypes[shipType]);
+        this.id = getUniqueID()
+        this.lastTouch = null
+        this.owner = null
+        this.type = null
+        this.x = null
+        this.y = null
+        this.angle = {
+            value: null,
+            time: null
+        } 
+    }
+
+    toJSON() {
+        return {
+          id: this.id,
+          y: this.y,
+          x: this.x,
+          angle: this.angle,
+          prevAngle: this.prevAngle,
+          owner: this.owner ? this.owner.getId() : undefined,
+          strength: this.strength,
+          size: this.size,
+          speed: this.speed,
+          type: this.type
+        }
+      }
+
+    getId() {return this.id}
+
+    getX() {return this.x + this.speed * ((new Date()/1000) - this.angle.time) * Math.cos(this.angle.value) }
+
+    getY() {return this.y + this.speed * ((new Date()/1000) - this.angle.time) * Math.sin(this.angle.value) }
+
+    getType() {
+        return this.type
+    }
+    
+    getStrength() {return this.strength }
+
+    getOwner() { return this.owner}
+
+    decreaseStrength(amount) {
+        this.strength = this.strength - amount
+        this.emit("shipUpdate", this)
+    }
+
+    turnTo(x, y, angle) {
+        const time = (new Date()/1000)
+        this.lastTouch = time;
+        this.x = x;
+        this.y = y;
+        this.prevAngle = {
+            time,
+            value: this.angle.value,
+        };
+        this.angle.time = time;
+        this.angle.value = angle + (Math.random() * Math.PI) / 20 - Math.PI / 40;            
+        galaxyService.emit("shipUpdate", ship);
+    }
+
+    launch(shipType, angle) {
+        const time = (new Date()/1000)
+        let shipX = this.getX()
+        let shipY = this.getY()
+
+        this.strength = this.getStrength() - shipTypes[shipType].cost;
+        galaxyService.emit("shipUpdate", this);
+
+        // todo move to galaxyService
+        const launchedShip = new Ship(shipType)
+        launchedShip.id = getUniqueID()
+        launchedShip.lastTouch = time
+        launchedShip.owner = this.getOwner()
+        launchedShip.type = shipType
+        launchedShip.x = shipX + (8 + Math.random() * 2) * Math.cos(angle)
+        launchedShip.y = shipY + (8 + Math.random() * 2) * Math.sin(angle)
+        launchedShip.angle.value = angle + (Math.random() * Math.PI) / 20 - Math.PI / 40
+        launchedShip.angle.time = time
+        launchedShip.carrierId = this.getId()
+        galaxyService.ships[launchedShip.getId()] = launchedShip
+        galaxyService.emit("shipUpdate", launchedShip);
+        return launchedShip
+    }
+
+}
+
+class Sun {
+    constructor() {
+        this.id= getUniqueID()
+        this.name= sunNames[Math.floor(Math.random() * sunNames.length)]
+        this.x= Math.random() * 10000,
+        this.y= Math.random() * 10000
+        this.size= 20
+        this.planets= {}
+        
+        for (let i = 0; i < 2 + Math.round(Math.random() * 10); i=i+1) {
+          const planet = new Planet(this)
+          this.planets[planet.getId()] = planet
+        }
+    }
+
+    toJSON() {
+        return {
+          id: this.id,
+          name: this.name,
+          x: this.x,
+          y: this.y,
+          size: this.size,
+          owner: this.owner ? this.owner.getId() : undefined,
+          planets: this.planets
+        }
+      }
+
+    getId() {
+        return this.id
+    }
+
+    getName() {
+        return this.name
+    }
+
+    getOwner() {
+        return this.owner
+    }
+
+    getX() {
+        return this.x
+    }
+
+    getY() {
+        return this.y
+    }
+
+    getIsDark() {
+        return this.dark
+    }
+
+    getPlanets() {
+        return Object.values(this.planets)
+    }
+
+}
+
 
 class GalaxyService extends EventEmitter {
 
@@ -56,11 +397,6 @@ class GalaxyService extends EventEmitter {
         });
         return planetFound;
       }
-
-    launchedShip(ship) {
-        this.ships[ship.getId()] = ship
-        this.emit("shipUpdate", ship);
-    }
 
     getShip(shipId) {
         return this.ships[shipId]
@@ -180,7 +516,7 @@ class GalaxyService extends EventEmitter {
                   ship.owner.alliance.getId() != ship2.owner.alliance.getId()
                 ) {
                   ship.strength -= ship2.shipDamage;
-                  ship2.strength -= ship.shipDamage;
+                  ship2.strength -= ship.shipDamage;                  
       
                   if (ship.strength <= 0) {
                       ship.shipDamage=0
@@ -395,4 +731,6 @@ class GalaxyService extends EventEmitter {
     }
 }
 
-module.exports = new GalaxyService()
+const galaxyService = new GalaxyService()
+
+module.exports = {galaxyService}
