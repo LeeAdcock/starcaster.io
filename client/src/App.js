@@ -1,9 +1,13 @@
 import "./App.css";
 import Galaxy from "./Galaxy.js";
+import Map from "./Map.js";
 import React, { useEffect, useState, useRef } from "react";
 import Spinner from "react-bootstrap/Spinner"
 
 function App() {
+  const [viewport, setViewport] = useState({x:0, y:0, w: 0, h:0});
+  const [minimapViewport, setMinimapViewport] = useState({x:0, y:0, w: 0, h:0});
+  
   const [time, setTime] = useState(0);
   const [suns, setSuns] = useState({});
   const [ships, setShips] = useState({});
@@ -110,7 +114,7 @@ function App() {
         if (msg.type === "allianceUpdate") {
           setAlliance({id: msg.allianceId, userIds: msg.userIds});
         }
-        if (msg.type === "shipDestroyed") {
+        if (msg.type === "shipDestroyed" && ships[msg.ship.id]) {
           let ship = ships[msg.ship.id];
           delete ships[msg.ship.id];
           setShips(ships);
@@ -169,7 +173,7 @@ function App() {
 
         <div style={{
             position: "absolute",
-            top: "15px",
+            top: "20px",
             right: "20px",
             color: "#0dcaf0",
             fontSize: "30px",
@@ -198,6 +202,8 @@ function App() {
         ships={ships}
         user={user}
         explosions={explosions}
+        viewportChange={(x, y, w, h) => setViewport({x, y, w, h})}
+        minimapViewport={minimapViewport}
         launch={(shipType, sourceType, source, count, angle) => {
             send({ type: "launch", shipType, sourceType, source, count, angle });
         }}
@@ -210,8 +216,18 @@ function App() {
         setAlliance={(allianceId) => {
             send({ type: "changeAlliance", allianceId });
         }}
-        
         />
+
+        {Object.values(suns).length != 0 &&  <Map
+        suns={suns}
+        alliance={alliance}
+        user={user}        
+        viewport={viewport}
+        viewportChange={(x, y) => {
+            setMinimapViewport({x, y})
+            setViewport({x:x, y:y, w:viewport.w, h:viewport.h})
+        }}
+        /> }
     </>
   );
 }

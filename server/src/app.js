@@ -6,120 +6,12 @@ const WebsocketServer = require('./websocketServer')
 const {galaxyService} = require('./services/galaxyService')
 const {userService} = require('./services/userService')
 
+const AiPlayer = require('./services/aiService')
 
+for(let i=0; i<2; i=i+1)
 {
-    const aiUser = userService.newUser()
-    aiUser.alliance = userService.newAlliance()
-    aiUser.alliance.addUser(aiUser)
-  
-    const suns = Object.values(galaxyService.getSuns())
-    const randomSun = suns[Math.floor(Math.random() * suns.length)];
-    const randomPlanet = randomSun.getPlanets()[Math.floor(Math.random() * randomSun.getPlanets().length)];
-    randomPlanet.setOwner(aiUser)
-
-    setInterval(() => {
-
-        Object.values(galaxyService.getShips()).forEach(ship => {
-            if(ship.getOwner().getId() === aiUser.getId()) {
-                if(ship.getType()==="carrier") {
-                    // launch from our carrier to a planet
-                    Object.values(galaxyService.getSuns()).forEach(sun => {
-                        const sunDistance = getDistance(sun.getX(), sun.getY(), ship.getX(), ship.getY())
-                        if(sunDistance<300) {
-                            Object.values(sun.getPlanets()).forEach(planet2 => {
-                                if((!planet2.getOwner() || ship.getOwner().getId() != planet2.getOwner().getId())) {
-                                    const interceptAngle = Math.atan2(planet2.getY() - ship.getY(), planet2.getX() - ship.getX())
-
-                                    for(let i = 0; i < 3; i=i+1) {
-                                        if(ship.getStrength() > 5) {
-                                            ship.launch("fighter", interceptAngle)
-                                        }
-                                    }
-                                }
-                            })
-                        }
-                    })
-                }
-            }
-        })
-
-
-        Object.values(galaxyService.getSuns()).forEach(sun => {
-            Object.values(sun.getPlanets()).forEach(planet => {
-                if(planet.getOwner() && planet.getStrength() > 50 && planet.getOwner().getId() == aiUser.getId()) {
-
-                    Object.values(planet.getMoons()).forEach(moon => {
-                        // launch from our planet to our moon
-                        if((!moon.getOwner() || planet.getOwner().getId() != moon.getOwner().getId() || moon.getStrength() < 10)) {
-                            const interceptAngle = Math.atan2(moon.getY() - planet.getY(), moon.getX() - planet.getX())
-                            for(let i = 0; i < 3; i=i+1) {
-                                if(planet.getStrength() > 50) {
-                                    planet.launch("fighter", interceptAngle + (i * Math.PI/50))
-                                }
-                            }
-                        }
-
-                        // launch from our moon to our planet
-                        if(moon.getOwner() && planet.getOwner().getId() === moon.getOwner().getId() && moon.getStrength()>35 && planet.getStrength()<100) {
-                            const interceptAngle = Math.atan2(planet.getY() - moon.getY(), planet.getX() - moon.getX())
-                            moon.launch("fighter", interceptAngle)
-                       }
-                    })
-                    
-                    // launch from our planet to another planet in this system
-                    if(planet.getStrength() > 50) {
-                        Object.values(sun.getPlanets()).forEach(planet2 => {
-                            if(planet.getId() != planet2.getId() && (!planet2.getOwner() || planet.getOwner().getId() != planet2.getOwner().getId() || planet2.getStrength() < 10)) {
-                                const interceptAngle = Math.atan2(planet2.getY() - planet.getY(), planet2.getX() - planet.getX())
-
-                                //if((Math.PI - Math.abs(Math.abs(interceptAngle - planet.getAngle()) - Math.PI)) > Math.PI/4) {
-                                    for(let i = 0; i < 3; i=i+1) {
-                                        if(planet.getStrength() > 50) {
-                                            planet.launch("fighter", interceptAngle + (i * Math.PI/50))
-                                        }
-                                    }
-                                //}
-                            }
-                        })
-                    }
-
-                    // launch from our planet to another planet in another system
-                    if(planet.getStrength() > 75 && Math.random()>.75) {
-                        Object.values(galaxyService.getSuns()).filter(sun2 => getDistance(sun.x, sun.y, sun2.x, sun2.y)<2000).sort(shuffleArray).forEach(sun2 => {
-                            if(sun2.getId()!==sun.getId()) {
-                                Object.values(sun2.getPlanets()).forEach(planet2 => {
-                                    if((!planet2.getOwner() || planet.getOwner().getId() != planet2.getOwner().getId())) {
-                                        const interceptAngle = Math.atan2(planet2.getY() - planet.getY(), planet2.getX() - planet.getX())
-                                        if(Math.random()>.25) {
-                                            // launch fighter
-                                            for(let i = 0; i < 3; i=i+1) {
-                                                if(planet.getStrength() > 50) {
-                                                    planet.launch("fighter", interceptAngle)
-                                                }
-                                            }
-                                        } else if(Math.random()>.25) {
-                                            // launch carrier
-                                            if(planet.getStrength() > 75) {
-                                                planet.launch("carrier", interceptAngle)
-                                            }
-                                        } else if(Math.random()>.25) {
-                                            // launch commander
-                                            if(planet.getStrength() > 50) {
-                                                planet.launch("commander", interceptAngle)
-                                            }
-                                        }
-                                    }
-                                })
-                            }
-                        })   
-                    }              
-                }
-            })
-        })
-
-    }, 10000)
+    new AiPlayer()
 }
-
 
 // web server
 const app = express();
@@ -130,15 +22,6 @@ app.use("/", express.static("build", { index: "index.html" }));
 app.get("/health", (req, res) => {
   res.send("healthy");
 });
-
-const shuffleArray = array => {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = array[i];
-      array[i] = array[j];
-      array[j] = temp;
-    }
-  }
 
 const getDistance = (x1, y1, x2, y2) => {
     let dy = x2 - x1;
@@ -248,22 +131,31 @@ websockets.on("authRequest", ({connection, data}) => {
     && userService.getUser(data.userId).getSecret() === data.secret
   ) {
     connection.user = userService.getUser(data.userId)
-  } else {
-    connection.user = userService.newUser()
 
     connection.socket.send(
         JSON.stringify({
-          time: new Date() / 1000,
-          type: 'auth',
-          user: connection.user.getId(),
-          secret: connection.user.getSecret(),
+            time: new Date() / 1000, 
+            type: 'allianceUpdate', 
+            allianceId: connection.user.alliance.getId(), 
+            userIds: connection.user.alliance.getUsers().map(user=>user.getId()),
         }),
-      );  
+    );
+
+  } else {
+    connection.user = userService.newUser()
+
+    connection.user.alliance = userService.newAlliance()
+    connection.user.alliance.addUser(connection.user)
+        
+    connection.socket.send(
+        JSON.stringify({
+        time: new Date() / 1000,
+        type: 'auth',
+        user: connection.user.getId(),
+        secret: connection.user.getSecret(),
+        }),
+    );  
   }
-
-  connection.user.alliance = userService.newAlliance()
-  connection.user.alliance.addUser(connection.user)
-
 
     if (!galaxyService.hasPlanetOrMoon(connection.user)) {
         const suns = Object.values(galaxyService.getSuns())
@@ -277,7 +169,7 @@ websockets.on("authRequest", ({connection, data}) => {
         type: 'update',
         suns: galaxyService.getSuns(),
         ships: galaxyService.getShips(),
-    }));
+  }));
 }) 
 
 websockets.on("changeAlliance", ({connection, data}) => {

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/app.js",
     "lint": "npx eslint ./src/**/* --fix",
-    "package": "npm shrinkwrap && zip -r artifact.zip ./ -x .git -x artifact.zip"
+    "package": "npm shrinkwrap && zip -r artifact.zip ./ -x .git -x ../artifact.zip"
   },
   "author": "",
   "license": "ISC",

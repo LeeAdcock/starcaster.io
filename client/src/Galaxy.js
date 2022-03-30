@@ -35,6 +35,8 @@ function Galaxy(props) {
   let lastSun = useRef(null);
 
   var initViewport = () => {
+    const canvas = document.getElementById("galaxy_canvas");
+
     // Initialize user viewport
     if (lastSun.current === null) {
       Object.values(sunsRef.current).forEach(sun => {
@@ -54,7 +56,6 @@ function Galaxy(props) {
         });
       });
     } else {
-      const canvas = document.getElementById("galaxy_canvas");
       translateX.current =
         -sunsRef.current[lastSun.current].x + canvas.width / 2;
       translateY.current =
@@ -62,6 +63,18 @@ function Galaxy(props) {
     }
 
     zoomscale.current = 1;
+
+    // Recalculate viewport for minimap
+    const ctx = canvas.getContext("2d");
+    if(ctx.transformedPoint) {
+        ctx.save()
+        ctx.translate(translateX.current, translateY.current);
+        ctx.scale(zoomscale.current, zoomscale.current);
+        var tl = ctx.transformedPoint(0, 0);
+        var br = ctx.transformedPoint(canvas.width, canvas.height);
+        props.viewportChange(tl.x, tl.y, br.x-tl.x, br.y-tl.y)
+        ctx.restore()
+    }
   };
 
   useEffect(() => {
@@ -73,6 +86,25 @@ function Galaxy(props) {
   useEffect(() => {
     timeRef.current = props.time;
   }, [props.time]);
+
+  useEffect(() => {
+    const canvas = document.getElementById("galaxy_canvas");
+    translateX.current = -(props.minimapViewport.x-canvas.width/2)*zoomscale.current;
+    translateY.current = -(props.minimapViewport.y-canvas.width/2)*zoomscale.current;
+    console.log("minimapViewport", props.minimapViewport)
+
+    const ctx = canvas.getContext("2d");
+    if(ctx.transformedPoint) {
+        ctx.save()
+        ctx.translate(translateX.current, translateY.current);
+        ctx.scale(zoomscale.current, zoomscale.current);
+        var tl = ctx.transformedPoint(0, 0);
+        var br = ctx.transformedPoint(canvas.width, canvas.height);
+        props.viewportChange(tl.x, tl.y, br.x-tl.x, br.y-tl.y)
+        ctx.restore()
+    }
+
+}, [props.minimapViewport]);
 
   useEffect(() => {
     explosionsRef.current = props.explosions;
@@ -202,6 +234,16 @@ function Galaxy(props) {
           translateX.current += pt.x - dragStart.x;
           translateY.current += pt.y - dragStart.y;
           dragStart = pt;
+
+          // Recalculate viewport for minimap
+          ctx.save();
+          ctx.translate(translateX.current, translateY.current);
+          ctx.scale(zoomscale.current, zoomscale.current);
+          var tl = ctx.transformedPoint(0, 0);
+          var br = ctx.transformedPoint(canvas.width, canvas.height);
+          props.viewportChange(tl.x, tl.y, br.x-tl.x, br.y-tl.y)
+          ctx.restore()
+
         }
       },
       false
@@ -216,7 +258,14 @@ function Galaxy(props) {
           ctx.save();
           ctx.translate(translateX.current, translateY.current);
           ctx.scale(zoomscale.current, zoomscale.current);
+
           var pt = ctx.transformedPoint(lastX, lastY);
+
+          // Recalculate viewport for minimap
+          var tl = ctx.transformedPoint(0, 0);
+          var br = ctx.transformedPoint(canvas.width, canvas.height);
+          props.viewportChange(tl.x, tl.y, br.x-tl.x, br.y-tl.y)
+
           ctx.restore();
 
           Object.values(shipsRef.current).forEach(ship => {
@@ -376,6 +425,12 @@ function Galaxy(props) {
       ctx.translate(translateX.current, translateY.current);
       ctx.scale(zoomscale.current, zoomscale.current);
       var pt2 = ctx.transformedPoint(lastX, lastY);
+
+      // Recalculate viewport for minimap
+      var tl = ctx.transformedPoint(0, 0);
+      var br = ctx.transformedPoint(canvas.width, canvas.height);
+      props.viewportChange(tl.x, tl.y, br.x-tl.x, br.y-tl.y)
+
       ctx.restore();
 
       translateX.current += zoomscale.current * (pt2.x - pt1.x);
@@ -417,7 +472,7 @@ function Galaxy(props) {
       // Background stars
       ctx.save();
       ctx.translate(translateX.current*.8, translateY.current*.8);
-      ctx.scale(zoomscale.current*.8, zoomscale.current*.8);
+      ctx.scale(zoomscale.current, zoomscale.current);
       stars.forEach((star) => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, 1, 0, 2 * Math.PI);

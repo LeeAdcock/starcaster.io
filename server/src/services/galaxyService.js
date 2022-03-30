@@ -65,6 +65,9 @@ const getDistance = (x1, y1, x2, y2) => {
         return this.getPlanet().getY() + this.distance * Math.sin(this.angle.value + (((new Date()/1000) * Math.PI) / this.distance) * this.angle.speed)
     }
     launch = (shipType, angle) => {
+        if(this.getStrength() < shipTypes[shipType].cost) 
+            return;
+
         const time = new Date() / 1000
         this.strength.value = this.getStrength() - shipTypes[shipType].cost;
         this.strength.time = time
@@ -171,13 +174,16 @@ class Planet {
             this.strength.value = currentStrength - (this.strength.max - 25);
             this.strength.max = this.strength.max + 25;
             this.strength.time = (new Date()/1000);
-            galaxyService.emit("planetUpdate", planet)
+            galaxyService.emit("planetUpdate", this)
             return true
         }
         return false
     }    
     launch = (shipType, angle) => {
-        const time = (new Date()/1000)
+        if(this.getStrength() < shipTypes[shipType].cost) 
+            return;
+
+            const time = (new Date()/1000)
         let planetX = this.getX()
         let planetY = this.getY()
 
@@ -263,10 +269,13 @@ class Ship {
         };
         this.angle.time = time;
         this.angle.value = angle + (Math.random() * Math.PI) / 20 - Math.PI / 40;            
-        galaxyService.emit("shipUpdate", ship);
+        galaxyService.emit("shipUpdate", this);
     }
 
     launch(shipType, angle) {
+        if(this.getStrength() < shipTypes[shipType].cost) 
+            return;
+
         const time = (new Date()/1000)
         let shipX = this.getX()
         let shipY = this.getY()
@@ -296,8 +305,8 @@ class Sun {
     constructor() {
         this.id= getUniqueID()
         this.name= sunNames[Math.floor(Math.random() * sunNames.length)]
-        this.x= Math.random() * 10000,
-        this.y= Math.random() * 10000
+        this.x= (Math.random() * 10000)
+        this.y= (Math.random() * 10000)
         this.size= 20
         this.planets= {}
         
@@ -441,150 +450,165 @@ class GalaxyService extends EventEmitter {
         });
       
         // Any ships run into each other?
-        Object.values(this.ships).forEach((ship) => {
-          let [shipX, shipY] = shipLocations[ship.id];
-      
-          Object.values(this.ships).forEach((ship2) => {
-            if (ship2.id != ship.id) {
-              let [shipX2, shipY2] = shipLocations[ship2.id];
-      
-              // Lazy calculation of the distance first
-              if (
-                shipX2 > shipX - 100 &&
-                shipX2 < shipX + 100 &&
-                shipY2 > shipY - 100 &&
-                shipY2 < shipY + 100
-              ) {
-                const shipDistance = getDistance(shipX2, shipY2, shipX, shipY);
-      
-                // Match speed of commander?
-                if (
-                  ship.type === "commander" &&
-                  ship.owner.alliance === ship2.owner.alliance &&
-                  shipDistance < 100
-                ) {
-                  if (ship.speed != ship2.speed) {
+        const ships = Object.values(this.ships)
+
+        const shipInteraction = (ship, ship2, shipDistance) => {
+            // Match speed of commander?
+            if (
+                ship.type === "commander" &&
+                ship.owner.alliance.getId() === ship2.owner.alliance.getId() &&
+                shipDistance < 100
+            ) {
+                if (ship.speed != ship2.speed) {
+                    let [shipX2, shipY2] = shipLocations[ship2.id];       
                     ship2.speed = ship.speed;
                     ship2.x = shipX2;
                     ship2.y = shipY2;
                     ship2.angle.time = time;
                     this.emit("shipUpdate", ship2)
-                  }
                 }
-      
-                // Join carrier?
-                if (
-                  ship.type === "carrier" &&
-                  ship.owner.alliance === ship2.owner.alliance &&
-                  shipDistance < ship.width
-                ) {
-                  if (ship.strength + ship2.strength <= 75) {
-                    ship.strength += ship2.strength;
-                    this.emit("shipUpdate", ship)
-                    this.emit("shipDestroyed", ship2)
-                  }
+            }
+    
+            // Join carrier?
+            if (
+                ship.type === "carrier" &&
+                ship.owner.alliance.getId() === ship2.owner.alliance.getId() &&
+                shipDistance < ship.width
+            ) {
+                if (ship.strength + ship2.strength <= 75) {
+                ship.strength += ship2.strength;
+                this.emit("shipUpdate", ship)
+                this.emit("shipDestroyed", ship2)
                 }
-      
-                // Seaker missile?
-                if (
-                  shipDistance < 50 &&
-                  ship.type === "missile4" &&
-                  ((!ship.intercept && ship.owner.alliance != ship2.owner.alliance ) ||
-                    (ship.intercept &&
-                      !this.ships[ship.intercept] &&
-                      ship.owner.alliance != ship2.owner.alliance ) ||
-                    ship.intercept === ship2.id)
-                ) {
-                  ship.intercept = ship2.id;
-                  const interceptAngle = Math.atan2(shipY2 - shipY, shipX2 - shipX);
-                  if (Math.abs(interceptAngle - ship.angle.value) > Math.PI / 10) {
+            }
+    
+            // Seaker missile?
+            if (
+                shipDistance < 50 &&
+                ship.type === "missile4" &&
+                (
+                    (!ship.intercept && ship.owner.alliance.getId() != ship2.owner.alliance.getId() ) ||
+                    (ship.intercept && !this.ships[ship.intercept] && ship.owner.alliance.getId() != ship2.owner.alliance.getId()) || 
+                    ship.intercept === ship2.id
+                )
+            ) {
+                ship.intercept = ship2.id;
+                let [shipX, shipY] = shipLocations[ship.id];
+                let [shipX2, shipY2] = shipLocations[ship2.id];
+
+                const interceptAngle = Math.atan2(shipY2 - shipY, shipX2 - shipX);
+                if (Math.abs(interceptAngle - ship.angle.value) > Math.PI / 10) {
                     ship.prevAngle = {
-                      time: new Date()/1000,
-                      value: ship.angle.value,
+                        time: new Date()/1000,
+                        value: ship.angle.value,
                     };
                     ship.angle.value = interceptAngle;
                     ship.angle.time = time;
                     ship.x = shipX;
                     ship.y = shipY;
                     this.emit("shipUpdate", ship)
-                  }
                 }
-      
-                // Collide?
-                if (
-                  shipDistance < ship.width + ship2.width &&
-                  ship.owner.alliance.getId() != ship2.owner.alliance.getId()
-                ) {
-                  ship.strength -= ship2.shipDamage;
-                  ship2.strength -= ship.shipDamage;                  
-      
-                  if (ship.strength <= 0) {
-                      ship.shipDamage=0
-                      this.emit("shipExploded", ship)
-                  } else {
-                      this.emit("shipUpdate", ship)
-                  }
-                  if (ship2.strength <= 0) {
+            }
+    
+            // Collide?
+            if (
+                shipDistance < ship.width + ship2.width &&
+                ship.owner.alliance.getId() != ship2.owner.alliance.getId()
+                && ship.strength > 0 
+                && ship2.strength > 0
+            ) {
+                ship.strength -= ship2.shipDamage;
+                ship2.strength -= ship.shipDamage;                  
+    
+                if (ship.strength <= 0) {
+                    ship.shipDamage=0
+                    this.emit("shipExploded", ship)
+                } else {
+                    this.emit("shipUpdate", ship)
+                }
+                if (ship2.strength <= 0) {
                     ship2.shipDamage=0
                     this.emit("shipExploded", ship2)
-                  } else {
-                      this.emit("shipUpdate", ship2)
-                  }
-      
-                  if (ship.splashDamage || ship2.splashDamage) {
+                } else {
+                    this.emit("shipUpdate", ship2)
+                }
+    
+                if (ship.splashDamage || ship2.splashDamage) {
                     let makeSplashDamage = (
-                      ship,
-                      shipDamage,
-                      splashDamageDistance,
-                      spreads
+                        ship2,
+                        shipDamage,
+                        splashDamageDistance,
+                        spreads
                     ) => {
-                      [shipX2, shipY2] = shipLocations[ship.id];
-      
-                      Object.values(this.ships).forEach((ship3) => {
-                        let [shipX3, shipY3] = shipLocations[ship3.id];
-      
-                        // TODO could shortcut with a lazy distance calculation first
-                        const shipDistance = getDistance(
-                          shipX3,
-                          shipY3,
-                          shipX,
-                          shipY
-                        );
-                        if (shipDistance < splashDamageDistance) {
-                          ship3.strength -= shipDamage;
-                          if (ship3.strength <= 0) {
-                              this.emit("shipExploded", ship3)
-      
-                            if (spreads) {
-                              makeSplashDamage(
-                                ship3,
-                                true,
-                                shipDamage,
-                                splashDamageDistance,
-                                spreads
-                              );
+                        const [shipX2, shipY2] = shipLocations[ship2.id];
+        
+                        Object.values(this.ships).forEach((ship3) => {
+                            const [shipX3, shipY3] = shipLocations[ship3.id];
+            
+                            // TODO could shortcut with a lazy distance calculation first
+                            const shipDistance = getDistance(
+                                shipX3,
+                                shipY3,
+                                shipX2,
+                                shipY2
+                            );
+                            if (shipDistance < splashDamageDistance) {
+                                ship3.strength -= shipDamage;
+                                if (ship3.strength <= 0) {
+                                    this.emit("shipExploded", ship3)
+                
+                                    if (spreads) {
+                                        makeSplashDamage(
+                                            ship3,
+                                            true,
+                                            shipDamage,
+                                            splashDamageDistance,
+                                            spreads
+                                        );
+                                    }
+                                } else {
+                                    this.emit("shipUpdate", ship3)
+                                }
                             }
-                          } else {
-                              this.emit("shipUpdate", ship3)
-                          }
-                        }
-                      });
+                        });
                     };
                     makeSplashDamage(
-                      ship,
-                      Math.max(ship.shipDamage, ship2.shipDamage),
-                      Math.max(
+                        ship,
+                        Math.max(ship.shipDamage, ship2.shipDamage),
+                        Math.max(
                         ship.splashDamageDistance || 0,
                         ship2.splashDamageDistance || 0
-                      ),
-                      ship.spreads || ship2.spreads
+                        ),
+                        ship.spreads || ship2.spreads
                     );
-                  }
                 }
-              }
             }
-          });
+
+        }
+
+        ships.forEach((ship, shipIndex) => {
+          let [shipX, shipY] = shipLocations[ship.id];
       
+          ships.forEach((ship2, ship2Index) => {
+
+            // shortcut
+            if(ship2Index < shipIndex) return
+
+            let [shipX2, shipY2] = shipLocations[ship2.id];
+        
+                // Lazy calculation of the distance first
+                if (
+                shipX2 > shipX - 100 &&
+                shipX2 < shipX + 100 &&
+                shipY2 > shipY - 100 &&
+                shipY2 < shipY + 100
+                ) {
+                    const shipDistance = getDistance(shipX2, shipY2, shipX, shipY);
+                    shipInteraction(ship, ship2, shipDistance)
+                    shipInteraction(ship2, ship, shipDistance)
+                }
+            })
+                   
           // Ships run into a sun, planet, or moon?
           Object.values(this.suns).forEach((sun) => {
             const sunDistance = getDistance(shipX, shipY, sun.getX(), sun.getY());
