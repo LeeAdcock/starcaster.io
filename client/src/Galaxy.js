@@ -19,8 +19,8 @@ var getDistance = (x1, y1, x2, y2) => {
 
 function Galaxy(props) {
   const timeRef = useRef(0);
-  const sunsRef = useRef([]);
-  const shipsRef = useRef([]);
+  const sunsRef = useRef({});
+  const shipsRef = useRef({});
   const userRef = useRef({});
   const allianceRef = useRef([]);
 
@@ -91,7 +91,6 @@ function Galaxy(props) {
     const canvas = document.getElementById("galaxy_canvas");
     translateX.current = -(props.minimapViewport.x-canvas.width/2)*zoomscale.current;
     translateY.current = -(props.minimapViewport.y-canvas.width/2)*zoomscale.current;
-    console.log("minimapViewport", props.minimapViewport)
 
     const ctx = canvas.getContext("2d");
     if(ctx.transformedPoint) {
@@ -127,8 +126,8 @@ function Galaxy(props) {
   }, [props.user]);
 
   useEffect(() => {
-    shipsRef.current = props.ships;
-  });
+    shipsRef.current = {...shipsRef.current, ...props.ships};
+    }, [props.ships]);
 
   useEffect(() => {
     const canvas = document.getElementById("galaxy_canvas");

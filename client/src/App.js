@@ -83,7 +83,8 @@ function App() {
           }
 
           if (msg.ships) {
-            setShips(msg.ships);
+            setShips({...msg.ships});
+            console.log("Received ships", Object.values(msg.ships).length)
           }
         }
         if (msg.type === "moonUpdate") {
