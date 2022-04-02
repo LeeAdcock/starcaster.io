@@ -2,6 +2,7 @@ import "./App.css";
 import Galaxy from "./Galaxy.js";
 import Map from "./Map.js";
 import React, { useEffect, useState, useRef } from "react";
+import Moment from 'react-moment';
 import Spinner from "react-bootstrap/Spinner"
 
 function App() {
@@ -17,6 +18,9 @@ function App() {
 
   const sunsRef = useRef(suns);
   sunsRef.current = suns;
+
+  const shipsRef = useRef(ships);
+  shipsRef.current = ships;
 
   const socket = useRef(null);
 
@@ -35,8 +39,8 @@ function App() {
     const ws = new WebSocket(
       (window.location.protocol === "https:" ? "wss" : "ws") +
         "://" +
-        "port-8080-starcaster-io-lee508578.preview.codeanywhere.com" +
-        //window.location.hostname +
+        //"port-8080-starcaster-io-lee508578.preview.codeanywhere.com" +
+        window.location.hostname +
         "/api"
     );
 
@@ -83,7 +87,8 @@ function App() {
           }
 
           if (msg.ships) {
-            setShips({...msg.ships});
+            shipsRef.current = msg.ships
+            setShips(shipsRef.current);
             console.log("Received ships", Object.values(msg.ships).length)
           }
         }
@@ -109,16 +114,20 @@ function App() {
           setSuns(sunsRef.current);
         }
         if (msg.type === "shipUpdate") {
-          ships[msg.ship.id] = msg.ship;
-          setShips(ships);
+          shipsRef.current[msg.ship.id] = msg.ship;
+          setShips(shipsRef.current);
         }
         if (msg.type === "allianceUpdate") {
           setAlliance({id: msg.allianceId, userIds: msg.userIds});
         }
-        if (msg.type === "shipDestroyed" && ships[msg.ship.id]) {
-          let ship = ships[msg.ship.id];
-          delete ships[msg.ship.id];
-          setShips(ships);
+        if (msg.type === "shipDestroyed" && shipsRef.current[msg.ship.id]) {
+          let ship = shipsRef.current[msg.ship.id];
+
+          // there may be references to this object even after we 
+          // remove it from our list, so set the strength to zero
+          ship.strength = 0
+          delete shipsRef.current[msg.ship.id];
+          setShips(shipsRef.current);
 
           if (msg.explosion) {
             let shipX =
@@ -154,6 +163,8 @@ function App() {
     };
   }, []);
 
+  const timeUntilReset = time*1000 - (time * 1000) % 10800000 + 10800000
+
   return (
     <>
         {Object.values(suns).length === 0 && <div style={{
@@ -174,7 +185,7 @@ function App() {
 
         <div style={{
             position: "absolute",
-            top: "20px",
+            top: "15px",
             right: "20px",
             color: "#0dcaf0",
             fontSize: "30px",
@@ -183,6 +194,19 @@ function App() {
         }}>
             starcaster.io
         </div>
+
+
+        {time && <div style={{
+            position: "absolute",
+            top: "50px",
+            right: "20px",
+            color: (timeUntilReset < 300000 ? "rgb(255, 193, 7)" : (timeUntilReset < 60000 ? "rgb(220, 53, 69)" : "#0dcaf0")),
+            fontSize: "12px",
+            fontFamily: "Mulish",
+            textShadow: "0px 0px 10px rgb(13 202 240)"
+        }}>
+            New game starts <Moment fromNow>{timeUntilReset}</Moment>
+        </div> }
 
         <div style={{
             position: "absolute",

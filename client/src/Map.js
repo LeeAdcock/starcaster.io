@@ -101,7 +101,7 @@ function Map(props) {
             0,
             sun.x,
             sun.y,
-            1000
+            1500
           );
           ownerHase.addColorStop(
             0,
@@ -112,7 +112,7 @@ function Map(props) {
           ownerHase.addColorStop(1, "rgb(0,0,0,0)");
           ctx.fillStyle = ownerHase;
           ctx.beginPath();
-          ctx.arc(sun.x, sun.y, 1000, 0, 2 * Math.PI);
+          ctx.arc(sun.x, sun.y, 1500, 0, 2 * Math.PI);
           ctx.fill();
         }
 

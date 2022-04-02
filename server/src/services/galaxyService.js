@@ -53,7 +53,7 @@ const getDistance = (x1, y1, x2, y2) => {
         return this.planet
     }
     getStrength() {
-        return Math.min(this.strength.max, this.strength.value + ((new Date()/1000) - this.strength.time) * this.strength.speed)
+        return Math.min(this.strength.max, this.strength.value + Math.floor(((new Date()/1000) - this.strength.time) * this.strength.speed))
     }
     getShieldLevel() {
         return  shieldLevelsByStrength[this.strength.max]
@@ -65,7 +65,7 @@ const getDistance = (x1, y1, x2, y2) => {
         return this.getPlanet().getY() + this.distance * Math.sin(this.angle.value + (((new Date()/1000) * Math.PI) / this.distance) * this.angle.speed)
     }
     launch(shipType, angle) {
-        if(this.getStrength() < shipTypes[shipType].cost + 1) 
+        if(this.getStrength() - shipTypes[shipType].cost <= 0) 
             return;
 
         const time = new Date() / 1000
@@ -154,7 +154,7 @@ class Planet {
         return this.angle.value + (((new Date()/1000) * Math.PI) / this.distance) * this.angle.speed
     }
     getStrength() {
-        return Math.min(this.strength.max, this.strength.value + ((new Date()/1000) - this.strength.time) * this.strength.speed)
+        return Math.min(this.strength.max, this.strength.value + Math.floor(((new Date()/1000) - this.strength.time) * this.strength.speed))
     }
     getShieldLevel() {
         return shieldLevelsByStrength[this.strength.max]
@@ -180,7 +180,7 @@ class Planet {
         return false
     }    
     launch(shipType, angle) {
-        if(this.getStrength() < shipTypes[shipType].cost + 1) 
+        if(this.getStrength() - shipTypes[shipType].cost <= 0) 
             return;
 
         const time = (new Date()/1000)
@@ -273,14 +273,15 @@ class Ship {
     }
 
     launch(shipType, angle) {
-        if(this.getStrength() < shipTypes[shipType].cost) 
+        const newStrength = this.getStrength() - shipTypes[shipType].cost
+        if(newStrength <= 0) 
             return;
 
         const time = (new Date()/1000)
         let shipX = this.getX()
         let shipY = this.getY()
 
-        this.strength = this.getStrength() - shipTypes[shipType].cost;
+        this.strength = newStrength;
         galaxyService.emit("shipUpdate", this);
 
         // todo move to galaxyService
@@ -289,8 +290,8 @@ class Ship {
         launchedShip.lastTouch = time
         launchedShip.owner = this.getOwner()
         launchedShip.type = shipType
-        launchedShip.x = shipX + (8 + Math.random() * 2) * Math.cos(angle)
-        launchedShip.y = shipY + (8 + Math.random() * 2) * Math.sin(angle)
+        launchedShip.x = shipX + (12 + Math.random() * 2) * Math.cos(angle)
+        launchedShip.y = shipY + (12 + Math.random() * 2) * Math.sin(angle)
         launchedShip.angle.value = angle + (Math.random() * Math.PI) / 20 - Math.PI / 40
         launchedShip.angle.time = time
         launchedShip.carrierId = this.getId()
@@ -363,15 +364,8 @@ class GalaxyService extends EventEmitter {
 
     constructor() {
         super()
-        this.suns = {}
-        this.ships = {}
-        this.planets = {}
 
-        for(let i=0; i<40; i=i+1) {
-            const sun = new Sun()
-            this.suns[sun.getId()] = sun
-            Object.values(sun.planets).forEach(planet => this.planets[planet.id] = planet)
-        }
+        this.reset()
 
         const schedule = () => 
             setTimeout(() => {
@@ -379,7 +373,7 @@ class GalaxyService extends EventEmitter {
                     this.collisionDetection();
                     schedule()
                 } catch (e) {
-                    this.emit("error", e)
+                    console.log(e)
                 }
             }, 200);
         schedule()
@@ -393,14 +387,26 @@ class GalaxyService extends EventEmitter {
         })        
     }
 
-    hasPlanetOrMoon(userId) {
+    reset() {
+        this.suns = {}
+        this.ships = {}
+        this.planets = {}
+
+        for(let i=0; i<40; i=i+1) {
+            const sun = new Sun()
+            this.suns[sun.getId()] = sun
+            Object.values(sun.planets).forEach(planet => this.planets[planet.id] = planet)
+        }
+    }
+
+    hasPlanetOrMoon(user) {
         let planetFound = false;
         Object.values(this.suns).forEach((sun) => {
-            planetFound = planetFound || sun.owner === userId;
+            planetFound = planetFound || sun.owner === user.getId();
           Object.values(sun.planets).forEach((planet) => {
-            planetFound = planetFound || planet.owner === userId;
+            planetFound = planetFound || planet.owner === user.getId();
             Object.values(planet.moons).forEach((moon) => {
-                planetFound = planetFound || moon.owner === userId;
+                planetFound = planetFound || moon.owner === user.getId();
             });
           });
         });
@@ -468,20 +474,7 @@ class GalaxyService extends EventEmitter {
                     this.emit("shipUpdate", ship2)
                 }
             }
-    
-            // Join carrier?
-            if (
-                ship.type === "carrier" &&
-                ship.owner.alliance.getId() === ship2.owner.alliance.getId() &&
-                shipDistance < ship.width
-            ) {
-                if (ship.strength + ship2.strength <= 75) {
-                ship.strength += ship2.strength;
-                this.emit("shipUpdate", ship)
-                this.emit("shipDestroyed", ship2)
-                }
-            }
-    
+        
             // Seaker missile?
             if (
                 shipDistance < 50 &&
@@ -665,10 +658,14 @@ class GalaxyService extends EventEmitter {
                         planet.strength.value = ship.people;
                         planet.strength.time = time;
                         planet.owner = ship.owner;
+                        if(planet.strength.max > 100) {
+                            // When planets change hands, shields drop a level
+                            planet.strength.max -= 25
+                        }
                         if (planet.owner.alliance != sun.owner.alliance) {
                           sun.owner = ship.owner;
                           this.emit("sunUpdate", sun)
-                      }
+                        }
                       } else {
                         planet.strength.value = 0;
                         planet.strength.time = time;

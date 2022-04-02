@@ -126,7 +126,7 @@ function Galaxy(props) {
   }, [props.user]);
 
   useEffect(() => {
-    shipsRef.current = {...shipsRef.current, ...props.ships};
+    shipsRef.current = props.ships;
     }, [props.ships]);
 
   useEffect(() => {

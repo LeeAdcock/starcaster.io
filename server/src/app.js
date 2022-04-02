@@ -8,10 +8,12 @@ const {userService} = require('./services/userService')
 
 const AiPlayer = require('./services/aiService')
 
+aiPlayers = []
 for(let i=0; i<2; i=i+1)
 {
-    new AiPlayer()
+    aiPlayers.push(new AiPlayer())
 }
+
 
 // web server
 const app = express();
@@ -30,6 +32,39 @@ const getDistance = (x1, y1, x2, y2) => {
   };
 
 websockets = new WebsocketServer(app)
+
+const resetInterval = 10800000
+const reset = () => {
+    aiPlayers.forEach(ai => ai.reset())
+    galaxyService.reset()
+
+    // Give active human players a planet
+    const suns = Object.values(galaxyService.getSuns())
+    Object.values(websockets.getConnections()).forEach(connection => {
+        const randomSun = suns[Math.floor(Math.random() * suns.length)];
+        const randomPlanet = randomSun.getPlanets()[Math.floor(Math.random() * randomSun.getPlanets().length)];
+        randomPlanet.setOwner(connection.user)
+    })
+
+    // Give active ai players a planet
+    aiPlayers.map(ai => ai.getUser()).forEach(user => {
+        const randomSun = suns[Math.floor(Math.random() * suns.length)];
+        const randomPlanet = randomSun.getPlanets()[Math.floor(Math.random() * randomSun.getPlanets().length)];
+        randomPlanet.setOwner(user)
+    })
+    
+    Object.values(websockets.getConnections()).forEach(connection => {    
+        connection.socket.send(JSON.stringify({
+            time: new Date() / 1000, 
+            type: 'update',
+            suns: galaxyService.getSuns(),
+            ships: galaxyService.getShips(),
+      }));
+    })
+    setTimeout(reset, resetInterval - (new Date() % resetInterval))
+}
+setTimeout(reset, resetInterval - (new Date() % resetInterval))
+
 galaxyService.on("planetUpdate", (planet) => {
     Object.values(websockets.activeConnections).forEach((connection) => {
         connection.socket.send(

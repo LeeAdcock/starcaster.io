@@ -7,4 +7,5 @@ div#galaxy canvas {
   width: 100%;
   margin: 0;
   background: black;
+  overflow: hidden;
 }
