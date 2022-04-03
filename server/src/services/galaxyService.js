@@ -36,7 +36,7 @@ const getDistance = (x1, y1, x2, y2) => {
           id: this.id,
           distance: this.distance,
           angle: this.angle,
-          owner: this.owner ? this.owner.getId() : undefined,
+          owner: this.owner ? this.getOwner().getId() : undefined,
           strength: this.strength,
           size: this.size,
           moons: this.moons
@@ -48,6 +48,9 @@ const getDistance = (x1, y1, x2, y2) => {
       }
     getOwner() {
         return this.owner
+    }
+    setOwner(owner) {
+        this.owner = owner
     }
     getPlanet() {
         return this.planet
@@ -67,6 +70,8 @@ const getDistance = (x1, y1, x2, y2) => {
     launch(shipType, angle) {
         if(this.getStrength() - shipTypes[shipType].cost <= 0) 
             return;
+        if(!this.getOwner())
+            return;
 
         const time = new Date() / 1000
         this.strength.value = this.getStrength() - shipTypes[shipType].cost;
@@ -79,7 +84,7 @@ const getDistance = (x1, y1, x2, y2) => {
         const launchedShip = new Ship(shipType)
         launchedShip.id = getUniqueID()
         launchedShip.lastTouch = time
-        launchedShip.owner = this.getOwner()
+        launchedShip.setOwner(this.getOwner())
         launchedShip.type = shipType
         launchedShip.x = moonX + (8 + Math.random() * 2) * Math.cos(angle)
         launchedShip.y = moonY + (8 + Math.random() * 2) * Math.sin(angle)
@@ -125,7 +130,7 @@ class Planet {
           id: this.id,
           distance: this.distance,
           angle: this.angle,
-          owner: this.owner ? this.owner.getId() : undefined,
+          owner: this.owner ? this.getOwner().getId() : undefined,
           strength: this.strength,
           size: this.size,
           moons: this.moons
@@ -182,6 +187,8 @@ class Planet {
     launch(shipType, angle) {
         if(this.getStrength() - shipTypes[shipType].cost <= 0) 
             return;
+        if(!this.getOwner())
+            return;
 
         const time = (new Date()/1000)
         let planetX = this.getX()
@@ -195,7 +202,7 @@ class Planet {
         const launchedShip = new Ship(shipType)
         launchedShip.id = getUniqueID()
         launchedShip.lastTouch = time
-        launchedShip.owner = this.getOwner()
+        launchedShip.setOwner(this.getOwner())
         launchedShip.type = shipType
         launchedShip.x = planetX + (8 + Math.random() * 2) * Math.cos(angle)
         launchedShip.y = planetY + (8 + Math.random() * 2) * Math.sin(angle)
@@ -231,7 +238,7 @@ class Ship {
           x: this.x,
           angle: this.angle,
           prevAngle: this.prevAngle,
-          owner: this.owner ? this.owner.getId() : undefined,
+          owner: this.owner ? this.getOwner().getId() : undefined,
           strength: this.strength,
           size: this.size,
           speed: this.speed,
@@ -252,6 +259,8 @@ class Ship {
     getStrength() {return this.strength }
 
     getOwner() { return this.owner}
+
+    setOwner(owner) { this.owner = owner}
 
     decreaseStrength(amount) {
         this.strength = this.strength - amount
@@ -276,6 +285,8 @@ class Ship {
         const newStrength = this.getStrength() - shipTypes[shipType].cost
         if(newStrength <= 0) 
             return;
+        if(!this.getOwner())
+            return;
 
         const time = (new Date()/1000)
         let shipX = this.getX()
@@ -288,7 +299,7 @@ class Ship {
         const launchedShip = new Ship(shipType)
         launchedShip.id = getUniqueID()
         launchedShip.lastTouch = time
-        launchedShip.owner = this.getOwner()
+        launchedShip.setOwner(this.getOwner())
         launchedShip.type = shipType
         launchedShip.x = shipX + (12 + Math.random() * 2) * Math.cos(angle)
         launchedShip.y = shipY + (12 + Math.random() * 2) * Math.sin(angle)
@@ -324,7 +335,7 @@ class Sun {
           x: this.x,
           y: this.y,
           size: this.size,
-          owner: this.owner ? this.owner.getId() : undefined,
+          owner: this.owner ? this.getOwner().getId() : undefined,
           planets: this.planets
         }
       }
@@ -339,6 +350,9 @@ class Sun {
 
     getOwner() {
         return this.owner
+    }
+    setOwner(owner) {
+        this.owner = owner
     }
 
     getX() {
@@ -402,11 +416,10 @@ class GalaxyService extends EventEmitter {
     hasPlanetOrMoon(user) {
         let planetFound = false;
         Object.values(this.suns).forEach((sun) => {
-            planetFound = planetFound || sun.owner === user.getId();
           Object.values(sun.planets).forEach((planet) => {
-            planetFound = planetFound || planet.owner === user.getId();
+            planetFound = planetFound || (planet.getOwner() && planet.getOwner().getId() === user.getId());
             Object.values(planet.moons).forEach((moon) => {
-                planetFound = planetFound || moon.owner === user.getId();
+                planetFound = planetFound || (moon.getOwner() && moon.getOwner().getId() === user.getId());
             });
           });
         });
@@ -462,7 +475,7 @@ class GalaxyService extends EventEmitter {
             // Match speed of commander?
             if (
                 ship.type === "commander" &&
-                ship.owner.alliance.getId() === ship2.owner.alliance.getId() &&
+                ship.getOwner().getAlliance().getId() === ship2.getOwner().getAlliance().getId() &&
                 shipDistance < 100
             ) {
                 if (ship.speed != ship2.speed) {
@@ -480,8 +493,8 @@ class GalaxyService extends EventEmitter {
                 shipDistance < 50 &&
                 ship.type === "missile4" &&
                 (
-                    (!ship.intercept && ship.owner.alliance.getId() != ship2.owner.alliance.getId() ) ||
-                    (ship.intercept && !this.ships[ship.intercept] && ship.owner.alliance.getId() != ship2.owner.alliance.getId()) || 
+                    (!ship.intercept && ship.getOwner().getAlliance().getId() != ship2.getOwner().getAlliance().getId() ) ||
+                    (ship.intercept && !this.ships[ship.intercept] && ship.getOwner().getAlliance().getId() != ship2.getOwner().getAlliance().getId()) || 
                     ship.intercept === ship2.id
                 )
             ) {
@@ -506,7 +519,7 @@ class GalaxyService extends EventEmitter {
             // Collide?
             if (
                 shipDistance < ship.width + ship2.width &&
-                ship.owner.alliance.getId() != ship2.owner.alliance.getId()
+                ship.getOwner().getAlliance().getId() != ship2.getOwner().getAlliance().getId()
                 && ship.strength > 0 
                 && ship2.strength > 0
             ) {
@@ -640,12 +653,12 @@ class GalaxyService extends EventEmitter {
                           (time - planet.strength.time) * planet.strength.speed
                       )
                     : 0;
-                  if (!planet.owner || planet.owner.alliance === ship.owner.alliance) {
+                  if (!planet.owner || planet.getOwner().alliance === ship.getOwner().alliance) {
                     // Claim or add to the planet's health
                     if (ship.people > 0) {
-                      if (!planet.owner) {
-                        sun.owner = ship.owner;
-                        planet.owner = ship.owner;
+                      if (!planet.getOwner()) {
+                        sun.setOwner(ship.owner);
+                        planet.setOwner(ship.owner);
                         this.emit("sunUpdate", sun)
                       }
                       planet.strength.value = ship.people + planetStrength;
@@ -657,19 +670,19 @@ class GalaxyService extends EventEmitter {
                       if (ship.people > 0) {
                         planet.strength.value = ship.people;
                         planet.strength.time = time;
-                        planet.owner = ship.owner;
+                        planet.setOwner(ship.owner);
                         if(planet.strength.max > 100) {
                             // When planets change hands, shields drop a level
                             planet.strength.max -= 25
                         }
-                        if (planet.owner.alliance != sun.owner.alliance) {
-                          sun.owner = ship.owner;
+                        if (planet.getOwner().alliance != sun.getOwner().alliance) {
+                          sun.setOwner(ship.owner);
                           this.emit("sunUpdate", sun)
                         }
                       } else {
                         planet.strength.value = 0;
                         planet.strength.time = time;
-                        planet.owner = null;
+                        planet.setOwner(null);
                       }
                     } else {
                       // damage planet
@@ -680,7 +693,7 @@ class GalaxyService extends EventEmitter {
       
                   this.emit("planetUpdate", planet)
       
-                  if(planet.owner && planet.owner.alliance != ship.owner.alliance){
+                  if(planet.getOwner() && planet.getOwner().alliance != ship.getOwner().alliance){
                       this.emit("shipExploded", ship)
                   } else {
                       this.emit("shipDestroyed", ship)
@@ -688,9 +701,6 @@ class GalaxyService extends EventEmitter {
                   
                 } else if (planetDistance < 500) {
                   Object.values(planet.moons).forEach((moon) => {
-                    const moonAngle =
-                      moon.angle.value +
-                      ((time * Math.PI) / moon.distance) * moon.angle.speed;
                     const moonX = moon.getX();
                     const moonY = moon.getY();
                     const moonDistance = getDistance(shipX, shipY, moonX, moonY);
@@ -702,12 +712,12 @@ class GalaxyService extends EventEmitter {
                               (time - moon.strength.time) * moon.strength.speed
                           )
                         : 0;
-                      if (!moon.owner || moon.owner.alliance === ship.owner.alliance) {
+                      if (!moon.owner || moon.getOwner().getAlliance().getId() === ship.getOwner().getAlliance().getId()) {
                         if (ship.people > 0) {
                             if(!moon.owner) {
-                              moon.owner = ship.owner;
+                              moon.setOwner(ship.owner);
                               if (moon.owner !== sun.owner) {
-                                sun.owner = ship.owner;
+                                sun.setOwner(ship.owner);
                                 this.emit("sunUpdate", sun)
                               }    
                             }
@@ -719,15 +729,15 @@ class GalaxyService extends EventEmitter {
                           if (ship.people > 0) {
                             moon.strength.value = ship.people;
                             moon.strength.time = time;
-                            moon.owner = ship.owner;
-                            if (moon.owner.alliance != sun.owner.alliance) {
-                              sun.owner = ship.owner;
+                            moon.setOwner(ship.owner);
+                            if (moon.getOwner().getAlliance().getId() != sun.getOwner().getAlliance().getId()) {
+                              sun.setOwner(ship.owner);
                               this.emit("sunUpdate", sun)
                             }
                           } else {
                             moon.strength.value = 0;
                             moon.strength.time = time;
-                            moon.owner = null;
+                            moon.setOwner(null);
                           }
                         } else {
                           moon.strength.value = -5 + moonStrength;
@@ -737,7 +747,7 @@ class GalaxyService extends EventEmitter {
       
                       this.emit("moonUpdate", moon)
       
-                      if(moon.owner && moon.owner.alliance != ship.owner.alliance) {
+                      if(moon.getOwner() && moon.getOwner().getAlliance().getId() != ship.getOwner().getAlliance().getId()) {
                           this.emit("shipExploded", ship)
                       } else {
                           this.emit("shipDestroyed", ship)

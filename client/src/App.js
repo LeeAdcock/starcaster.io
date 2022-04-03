@@ -39,8 +39,8 @@ function App() {
     const ws = new WebSocket(
       (window.location.protocol === "https:" ? "wss" : "ws") +
         "://" +
-        //"port-8080-starcaster-io-lee508578.preview.codeanywhere.com" +
-        window.location.hostname +
+        "port-8080-starcaster-io-lee508578.preview.codeanywhere.com" +
+        //window.location.hostname +
         "/api"
     );
 
@@ -163,7 +163,7 @@ function App() {
     };
   }, []);
 
-  const timeUntilReset = time*1000 - (time * 1000) % 10800000 + 10800000
+  const timeUntilReset = time*1000 - (time * 1000) % 7200000 + 7200000
 
   return (
     <>

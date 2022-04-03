@@ -26,7 +26,7 @@ class AiPlayer {
     const executeTask = () => {
       const task = this.tasks.shift();
       if (task) task();
-      setTimeout(executeTask, 10000 / (this.tasks.length || 5));
+      setTimeout(executeTask, 20000 / (this.tasks.length || 5));
     };
     executeTask();
 
@@ -123,7 +123,7 @@ class AiPlayer {
                     this.tasks.push(() => {
                         const interceptAngle = Math.atan2(moon.getY() - planet.getY(), moon.getX() - planet.getX());
                         for (let i = 0; i < 3; i += 1) {
-                            if (planet.getStrength() > 50) {
+                            if (planet.getStrength() > 50 && planet.getOwner().getId() == aiUser.getId()) {
                                 planet.launch('fighter', interceptAngle + (i * Math.PI / 50));
                             }
                         }
@@ -133,8 +133,11 @@ class AiPlayer {
                 // launch from our moon to our planet
                 if (!planet.getOwner() || (moon.getOwner() && planet.getOwner().getId() === moon.getOwner().getId() && moon.getStrength() > 35 && planet.getStrength() < 100)) {
                     this.tasks.push(() => {
-                        const interceptAngle = Math.atan2(planet.getY() - moon.getY(), planet.getX() - moon.getX());
-                        moon.launch('fighter', interceptAngle);
+                        if(moon.getOwner().getId() == aiUser.getId())
+                        {
+                            const interceptAngle = Math.atan2(planet.getY() - moon.getY(), planet.getX() - moon.getX());
+                            moon.launch('fighter', interceptAngle);
+                        }
                     })
                 }
                 });
@@ -146,7 +149,7 @@ class AiPlayer {
                     this.tasks.push(() => {
                         const interceptAngle = Math.atan2(planet2.getY() - planet.getY(), planet2.getX() - planet.getX());
                         for (let i = 0; i < 3; i += 1) {
-                        if (planet.getStrength() > 50) {
+                        if (planet.getStrength() > 50 && planet.getOwner().getId() == aiUser.getId()) {
                             planet.launch('fighter', interceptAngle + (i * Math.PI / 50));
                         }
                         }
@@ -167,11 +170,11 @@ class AiPlayer {
                             if (Math.random() > 0.50) {
                                 // launch fighter
                                 for (let i = 0; i < 3; i += 1) {
-                                    if (planet.getStrength() > 50) {
+                                    if (planet.getStrength() > 50 && planet.getOwner().getId() == aiUser.getId()) {
                                         planet.launch('fighter', interceptAngle);
                                     }
                                 }
-                            } else if (Math.random() > 0.50) {
+                            } else if (Math.random() > 0.50 && planet.getOwner().getId() == aiUser.getId()) {
                                 // launch carrier
                                 if (planet.getStrength() > 150) {
                                     planet.launch('carrier3', interceptAngle);
@@ -182,7 +185,7 @@ class AiPlayer {
                                 if (planet.getStrength() > 125) {
                                     planet.launch('carrier2', interceptAngle);
                                 }
-                            } else if (Math.random() > 0.75) {
+                            } else if (Math.random() > 0.75 && planet.getOwner().getId() == aiUser.getId()) {
                                 // launch commander
                                 if (planet.getStrength() > 50) {
                                 planet.launch('commander', interceptAngle);

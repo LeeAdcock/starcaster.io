@@ -29,8 +29,11 @@ function Galaxy(props) {
   let vehicleType = useRef("fighter");
 
   let zoomscale = useRef(1);
-  let translateX = useRef(0);
-  let translateY = useRef(0);
+  let zoomscaleTarget = useRef(1);
+  let viewportRef = useRef({x:0, y:0, width:0, height:0});
+
+  let centerX = useRef(0);
+  let centerY = useRef(0);
 
   let lastSun = useRef(null);
 
@@ -50,25 +53,23 @@ function Galaxy(props) {
             let planetY = sun.y + planet.distance * Math.cos(planetAngle);
 
             const canvas = document.getElementById("galaxy_canvas");
-            translateX.current = -planetX + canvas.width / 2;
-            translateY.current = -planetY + canvas.height / 2;
+            centerX.current = planetX;
+            centerY.current = planetY;
           }
         });
       });
     } else {
-      translateX.current =
-        -sunsRef.current[lastSun.current].x + canvas.width / 2;
-      translateY.current =
-        -sunsRef.current[lastSun.current].y + canvas.height / 2;
+      centerX.current = sunsRef.current[lastSun.current].x;
+      centerY.current = sunsRef.current[lastSun.current].y;
     }
 
-    zoomscale.current = 1;
+    zoomscaleTarget.current = 1;
 
     // Recalculate viewport for minimap
     const ctx = canvas.getContext("2d");
     if(ctx.transformedPoint) {
         ctx.save()
-        ctx.translate(translateX.current, translateY.current);
+        ctx.translate(centerX.current - canvas.width / 2, centerY.current - canvas.height / 2);
         ctx.scale(zoomscale.current, zoomscale.current);
         var tl = ctx.transformedPoint(0, 0);
         var br = ctx.transformedPoint(canvas.width, canvas.height);
@@ -88,14 +89,15 @@ function Galaxy(props) {
   }, [props.time]);
 
   useEffect(() => {
+      // TODO
     const canvas = document.getElementById("galaxy_canvas");
-    translateX.current = -(props.minimapViewport.x-canvas.width/2)*zoomscale.current;
-    translateY.current = -(props.minimapViewport.y-canvas.width/2)*zoomscale.current;
+    centerX.current = props.minimapViewport.x;
+    centerY.current = props.minimapViewport.y;
 
     const ctx = canvas.getContext("2d");
     if(ctx.transformedPoint) {
         ctx.save()
-        ctx.translate(translateX.current, translateY.current);
+        ctx.translate(-centerX.current + (canvas.width/2), -centerY.current + (canvas.height/2));
         ctx.scale(zoomscale.current, zoomscale.current);
         var tl = ctx.transformedPoint(0, 0);
         var br = ctx.transformedPoint(canvas.width, canvas.height);
@@ -133,79 +135,11 @@ function Galaxy(props) {
     const canvas = document.getElementById("galaxy_canvas");
     const ctx = canvas.getContext("2d");
 
-    // borrowed from https://gist.github.com/dzhang123/2a3a611b3d75a45a3f41
-    let svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    let xform = svg.createSVGMatrix();
-
-    let lastX = canvas.width / 2,
-      lastY = canvas.height / 2;
+    let lastX = canvas.width / 2;
+    let lastY = canvas.height / 2;
+    let startX = null;
+    let startY = null;
     let dragStart, dragged;
-
-    ctx.getTransform = function () {
-      return xform;
-    };
-
-    var savedTransforms = [];
-    var save = ctx.save;
-    ctx.save = function () {
-      savedTransforms.push(xform.translate(0, 0));
-      return save.call(ctx);
-    };
-
-    var restore = ctx.restore;
-    ctx.restore = function () {
-      xform = savedTransforms.pop();
-      return restore.call(ctx);
-    };
-
-    var scale = ctx.scale;
-    ctx.scale = function (sx, sy) {
-      xform = xform.scaleNonUniform(sx, sy);
-      return scale.call(ctx, sx, sy);
-    };
-
-    var rotate = ctx.rotate;
-    ctx.rotate = function (radians) {
-      xform = xform.rotate((radians * 180) / Math.PI);
-      return rotate.call(ctx, radians);
-    };
-
-    var translate = ctx.translate;
-    ctx.translate = function (dx, dy) {
-      xform = xform.translate(dx, dy);
-      return translate.call(ctx, dx, dy);
-    };
-
-    var transform = ctx.transform;
-    ctx.transform = function (a, b, c, d, e, f) {
-      var m2 = svg.createSVGMatrix();
-      m2.a = a;
-      m2.b = b;
-      m2.c = c;
-      m2.d = d;
-      m2.e = e;
-      m2.f = f;
-      xform = xform.multiply(m2);
-      return transform.call(ctx, a, b, c, d, e, f);
-    };
-
-    var setTransform = ctx.setTransform;
-    ctx.setTransform = function (a, b, c, d, e, f) {
-      xform.a = a;
-      xform.b = b;
-      xform.c = c;
-      xform.d = d;
-      xform.e = e;
-      xform.f = f;
-      return setTransform.call(ctx, a, b, c, d, e, f);
-    };
-
-    var pt = svg.createSVGPoint();
-    ctx.transformedPoint = function (x, y) {
-      pt.x = x;
-      pt.y = y;
-      return pt.matrixTransform(xform.inverse());
-    };
 
     canvas.addEventListener(
       "mousedown",
@@ -216,6 +150,8 @@ function Galaxy(props) {
             "none";
         lastX = evt.offsetX || evt.pageX - canvas.offsetLeft;
         lastY = evt.offsetY || evt.pageY - canvas.offsetTop;
+        startX = evt.offsetX || evt.pageX - canvas.offsetLeft;
+        startY = evt.offsetY || evt.pageY - canvas.offsetTop;
         dragStart = ctx.transformedPoint(lastX, lastY);
         dragged = false;
       },
@@ -230,13 +166,13 @@ function Galaxy(props) {
         dragged = true;
         if (dragStart) {
           var pt = ctx.transformedPoint(lastX, lastY);
-          translateX.current += pt.x - dragStart.x;
-          translateY.current += pt.y - dragStart.y;
+          centerX.current += dragStart.x - pt.x;
+          centerY.current += dragStart.y - pt.y;
           dragStart = pt;
 
           // Recalculate viewport for minimap
           ctx.save();
-          ctx.translate(translateX.current, translateY.current);
+          ctx.translate(-centerX.current + (canvas.width/2), -centerY.current + (canvas.height/2));
           ctx.scale(zoomscale.current, zoomscale.current);
           var tl = ctx.transformedPoint(0, 0);
           var br = ctx.transformedPoint(canvas.width, canvas.height);
@@ -253,9 +189,10 @@ function Galaxy(props) {
       function (evt) {
         dragStart = null;
 
-        if (!dragged) {
+        // TODO ignore if dragged a small distance
+        if (!dragged || getDistance(startX, startY, lastX, lastY)<10) {
           ctx.save();
-          ctx.translate(translateX.current, translateY.current);
+          ctx.translate(-centerX.current + (canvas.width/2), -centerY.current + (canvas.height/2));
           ctx.scale(zoomscale.current, zoomscale.current);
 
           var pt = ctx.transformedPoint(lastX, lastY);
@@ -411,29 +348,21 @@ function Galaxy(props) {
     );
 
     var zoom = function (clicks) {
-      ctx.save();
-      ctx.translate(translateX.current, translateY.current);
-      ctx.scale(zoomscale.current, zoomscale.current);
-      var pt1 = ctx.transformedPoint(lastX, lastY);
-      ctx.restore();
-
-      zoomscale.current += clicks;
-      zoomscale.current = Math.min(Math.max(zoomscale.current, 0.1), 8);
-
-      ctx.save();
-      ctx.translate(translateX.current, translateY.current);
-      ctx.scale(zoomscale.current, zoomscale.current);
-      var pt2 = ctx.transformedPoint(lastX, lastY);
+      zoomscaleTarget.current += clicks;
+      zoomscaleTarget.current = Math.min(Math.max(zoomscaleTarget.current, 0.1), 8);
 
       // Recalculate viewport for minimap
+      ctx.save();
+      ctx.translate(-centerX.current, -centerY.current);
+      ctx.scale(zoomscale.current, zoomscale.current);
+      ctx.translate((canvas.clientWidth)/2, (canvas.clientHeight)/2);
+
       var tl = ctx.transformedPoint(0, 0);
-      var br = ctx.transformedPoint(canvas.width, canvas.height);
+      var br = ctx.transformedPoint(canvas.clientWidth, canvas.clientHeight);
+      // TODO: use a useEffect to call this prop
+      viewportRef.current = {x:tl.x, y:tl.y, width:br.x-tl.x, height:br.y-tl.y}
       props.viewportChange(tl.x, tl.y, br.x-tl.x, br.y-tl.y)
-
       ctx.restore();
-
-      translateX.current += zoomscale.current * (pt2.x - pt1.x);
-      translateY.current += zoomscale.current * (pt2.y - pt1.y);
     };
 
     var handleScroll = function (evt) {
@@ -462,6 +391,10 @@ function Galaxy(props) {
     const rgb = (r, g, b) => "rgb(" + r + "," + g + "," + b + ")";
 
     setInterval(() => {
+
+        console.log("center", centerX.current, centerY.current)
+      zoomscale.current = (zoomscale.current + zoomscaleTarget.current) / 2
+
       canvas.width = canvas.clientWidth;
       canvas.height = canvas.clientHeight;
 
@@ -470,8 +403,8 @@ function Galaxy(props) {
 
       // Background stars
       ctx.save();
-      ctx.translate(translateX.current*.8, translateY.current*.8);
-      ctx.scale(zoomscale.current, zoomscale.current);
+      ctx.translate(-centerX.current + (viewportRef.current.width/2), -centerY.current + (viewportRef.current.height/2));
+      ctx.scale(zoomscale.current*.8, zoomscale.current*.8);
       stars.forEach((star) => {
         ctx.beginPath();
         ctx.arc(star.x, star.y, 1, 0, 2 * Math.PI);
@@ -482,9 +415,9 @@ function Galaxy(props) {
 
       // User view window
       ctx.save();
-      ctx.translate(translateX.current, translateY.current);
+      ctx.translate(-centerX.current, -centerY.current);
       ctx.scale(zoomscale.current, zoomscale.current);
-
+      //ctx.translate((canvas.width) / 2, (canvas.height) / 2);
 
       // Grid
       for(let x=-100000; x<100000; x+=10000) {

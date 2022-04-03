@@ -33,7 +33,7 @@ const getDistance = (x1, y1, x2, y2) => {
 
 websockets = new WebsocketServer(app)
 
-const resetInterval = 10800000
+const resetInterval = 7200000
 const reset = () => {
     aiPlayers.forEach(ai => ai.reset())
     galaxyService.reset()
