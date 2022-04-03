@@ -44,7 +44,7 @@ const shipTypes = {
   },
   missile3: {
     splashDamage: true,
-    splashDamageDistance: 100,
+    splashDamageDistance: 30,
     spreads: true,
     strength: 1,
     cost: 110,

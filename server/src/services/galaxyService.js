@@ -519,21 +519,20 @@ class GalaxyService extends EventEmitter {
             // Collide?
             if (
                 shipDistance < ship.width + ship2.width &&
-                ship.getOwner().getAlliance().getId() != ship2.getOwner().getAlliance().getId()
-                && ship.strength > 0 
+                ship.getOwner().getAlliance().getId() != ship2.getOwner().getAlliance().getId() && 
+                ship.getId() != ship2.getId() &&
+                ship.strength > 0 
                 && ship2.strength > 0
             ) {
                 ship.strength -= ship2.shipDamage;
                 ship2.strength -= ship.shipDamage;                  
     
                 if (ship.strength <= 0) {
-                    ship.shipDamage=0
                     this.emit("shipExploded", ship)
                 } else {
                     this.emit("shipUpdate", ship)
                 }
                 if (ship2.strength <= 0) {
-                    ship2.shipDamage=0
                     this.emit("shipExploded", ship2)
                 } else {
                     this.emit("shipUpdate", ship2)
@@ -546,37 +545,41 @@ class GalaxyService extends EventEmitter {
                         splashDamageDistance,
                         spreads
                     ) => {
-                        const [shipX2, shipY2] = shipLocations[ship2.id];
-        
-                        Object.values(this.ships).forEach((ship3) => {
-                            const [shipX3, shipY3] = shipLocations[ship3.id];
+                        try {
+                            const [shipX2, shipY2] = shipLocations[ship2.id];
             
-                            // TODO could shortcut with a lazy distance calculation first
-                            const shipDistance = getDistance(
-                                shipX3,
-                                shipY3,
-                                shipX2,
-                                shipY2
-                            );
-                            if (shipDistance < splashDamageDistance) {
-                                ship3.strength -= shipDamage;
-                                if (ship3.strength <= 0) {
-                                    this.emit("shipExploded", ship3)
+                            Object.values(this.ships).forEach((ship3) => {
+                                const [shipX3, shipY3] = shipLocations[ship3.id];
                 
-                                    if (spreads) {
-                                        makeSplashDamage(
-                                            ship3,
-                                            true,
-                                            shipDamage,
-                                            splashDamageDistance,
-                                            spreads
-                                        );
+                                // TODO could shortcut with a lazy distance calculation first
+                                const shipDistance = getDistance(
+                                    shipX3,
+                                    shipY3,
+                                    shipX2,
+                                    shipY2
+                                );
+                                if (shipDistance < splashDamageDistance) {
+                                    ship3.strength -= shipDamage;
+                                    if (ship3.strength <= 0) {
+                                        this.emit("shipExploded", ship3)
+                    
+                                        if (spreads) {
+                                            setTimeout(() => 
+                                                makeSplashDamage(
+                                                    ship3,
+                                                    shipDamage,
+                                                    splashDamageDistance,
+                                                    spreads
+                                                ), 250)
+                                        }
+                                    } else {
+                                        this.emit("shipUpdate", ship3)
                                     }
-                                } else {
-                                    this.emit("shipUpdate", ship3)
                                 }
-                            }
-                        });
+                            });
+                        } catch (e) {
+                            console.log(e)
+                        }
                     };
                     makeSplashDamage(
                         ship,
